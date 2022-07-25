@@ -7,13 +7,12 @@
 #   $ pipenv install twine --dev
 
 
-
-
 import os
 import sys
 import glob
 from shutil import rmtree
 from setuptools import setup, find_namespace_packages, Command
+
 
 def read(fname):
     with open(os.path.join(os.path.dirname(__file__), fname)) as f:
@@ -28,22 +27,22 @@ def get_info():
     return info
 
 
-
 setup(
     name='CMA',
     author='Stephen Richer',
     author_email='stephen.richer@nhs.net',
-    url='https://github.com/StephenRicher/pyTemplateBath',
+    url='https://github.com/nhsx/morbidity_network_analysis',
     scripts=['bin/CMA'],
     python_requires='>=3.6.0',
     install_requires=[],
     license='MIT',
     classifiers=[
-        'Development Status :: 4 - Beta',
+        'Development Status :: 1 - Planning',
         'License :: OSI Approved :: MIT License',
         'Intended Audience :: Science/Research',
-        'Topic :: Scientific/Engineering :: Bio-Informatics',
-        'Programming Language :: Python :: 3.6',
+        'Intended Audience :: Healthcare Industry',
+        'Topic :: Scientific/Engineering',
+        'Programming Language :: Python :: 3.9',
         'Natural Language :: English',
     ],
     version=get_info()['__version__'],

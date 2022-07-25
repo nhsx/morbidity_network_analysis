@@ -15,18 +15,18 @@ def generateData(
     np.random.seed(seed)
     # Probability of having N morbidities
     multimordibity = ({
-          0: 0.05,  1: 0.05,  2: 0.05, 5: 0.75, 10: 0.10
+        0: 0.05,  1: 0.05,  2: 0.05, 5: 0.75, 10: 0.10
     })
 
     # Define CSV header
     strataHead = ['sex', 'age']
     primaryHead = ['Primary_Diagnosis_Code']
     codeHeaders = (
-          ['Primary_Diagnosis_Code']
+        ['Primary_Diagnosis_Code']
         + [f'Secondary_Diagnosis_Code_{i:02d}' for i in range(1, 25 + 1)]
     )
     timeHeaders = (
-           ['Primary_Diagnosis_Time']
+        ['Primary_Diagnosis_Time']
         + [f'Secondary_Diagnosis_Time_{i:02d}' for i in range(1, 25 + 1)]
     )
     header = strataHead + codeHeaders + timeHeaders
@@ -45,7 +45,7 @@ def generateData(
             # Select time as the node value (enforce directionality)
             simTime = simulatedMM.copy() + 1
             # Shuffle time order sometimes to add some noise
-            #if np.random.random() < 0.25:
+            # if np.random.random() < 0.25:
             #    np.random.shuffle(simTime)
             simulatedMM = np.concatenate([simulatedMM, nEmpty * ['NULL']])
             simTime = np.concatenate([simTime, nEmpty * ['NULL']])
@@ -65,7 +65,6 @@ def selectedWeightValue(d: dict) -> int:
 
 def sampleNodes(nodes: int, size: int, overlap: int, weight: float):
     baseP = np.ones(nodes)
-    #baseP[::10] = baseP[::10] * weight
     # Intialise selection
     select = np.random.choice(range(nodes))
     allMM = [select]
@@ -110,7 +109,7 @@ def parseArgs():
         help='Group size of co-occuring clusters (default: %(default)s)')
     parser.add_argument(
         '--weight', type=float, default=5,
-        help='Sampling weight factor for associated groups (default: %(default)s)')
+        help='Sampling weight for associated groups (default: %(default)s)')
     parser.add_argument(
         '--overlap', type=int, default=1,
         help='Co-occurence overlap (default: %(default)s)')

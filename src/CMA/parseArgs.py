@@ -19,11 +19,11 @@ def parseArgs():
         version='%(prog)s {}'.format(__version__))
     parser.add_argument(
         '--verbose', action='store_const', const=logging.DEBUG,
-            default=logging.ERROR, help='verbose logging for debugging')
+        default=logging.ERROR, help='verbose logging for debugging')
     parser.set_defaults(function=main)
 
     args = parser.parse_args()
-    logFormat='%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'
+    logFormat = '%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'
     logging.basicConfig(level=args.verbose, format=logFormat)
     function = args.function
     del args.verbose, args.function
