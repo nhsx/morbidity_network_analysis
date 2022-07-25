@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 
-""" Generate dummy test data for CMA. """
+""" Generate test data for CMA. """
 
 
 import sys
 import argparse
-import collections
 import numpy as np
 
 
-def generateData(
-        nodes: int, seed: int, groupSize: int,
-        nPatients: int, weight: int, overlap: int):
+def simulateData(
+        nodes: int, seed: int, nRecords: int, weight: int, overlap: int):
     np.random.seed(seed)
     # Probability of having N morbidities
     multimordibity = ({
@@ -32,7 +30,7 @@ def generateData(
     header = strataHead + codeHeaders + timeHeaders
 
     print(*header, sep=',')
-    for i in range(nPatients):
+    for i in range(nRecords):
         sex = np.random.choice(['male', 'female'])
         age = np.random.choice([25, 55])
         # Select number of morbidities
@@ -92,38 +90,3 @@ def sampleNodes(nodes: int, size: int, overlap: int, weight: float):
                     break
         allMM.append(select)
     return np.array(allMM)
-
-
-def parseArgs():
-
-    epilog = 'Stephen Richer, NHS England (stephen.richer@nhs.net)'
-    parser = argparse.ArgumentParser(epilog=epilog, description=__doc__)
-    parser.add_argument(
-        '--nodes', type=int, default=60,
-        help='Total nodes in simulated network (default: %(default)s)')
-    parser.add_argument(
-        '--nPatients', type=int, default=20_000,
-        help='Number of patient records to simulate (default: %(default)s)')
-    parser.add_argument(
-        '--groupSize', type=int, default=10,
-        help='Group size of co-occuring clusters (default: %(default)s)')
-    parser.add_argument(
-        '--weight', type=float, default=5,
-        help='Sampling weight for associated groups (default: %(default)s)')
-    parser.add_argument(
-        '--overlap', type=int, default=1,
-        help='Co-occurence overlap (default: %(default)s)')
-    parser.add_argument(
-        '--seed', type=int, default=42,
-        help='Seed for random number generator (default: %(default)s)')
-    parser.set_defaults(function=generateData)
-    args = parser.parse_args()
-    function = args.function
-    del args.function
-
-    return args, function
-
-
-if __name__ == '__main__':
-    args, function = parseArgs()
-    sys.exit(function(**vars(args)))

@@ -33,8 +33,19 @@ setup(
     author_email='stephen.richer@nhs.net',
     url='https://github.com/nhsx/morbidity_network_analysis',
     scripts=['bin/CMA'],
-    python_requires='>=3.6.0',
-    install_requires=[],
+    python_requires='>=3.9.0',
+    install_requires=[
+        'pyyaml',
+        'numpy',
+        'pandas',
+        'networkx',
+        'matplotlib',
+        'pyvis',
+        'scipy',
+        'python-louvain',
+        'scikit-learn',
+        'statsmodels'
+    ],
     license='MIT',
     classifiers=[
         'Development Status :: 1 - Planning',
