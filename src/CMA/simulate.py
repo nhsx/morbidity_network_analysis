@@ -11,10 +11,6 @@ import numpy as np
 def simulateData(
         nodes: int, seed: int, nRecords: int, weight: int, overlap: int):
     np.random.seed(seed)
-    # Probability of having N morbidities
-    multimordibity = ({
-        0: 0.05,  1: 0.05,  2: 0.05, 5: 0.75, 10: 0.10
-    })
 
     # Define CSV header
     strataHead = ['sex', 'age']
@@ -34,7 +30,7 @@ def simulateData(
         sex = np.random.choice(['male', 'female'])
         age = np.random.choice([25, 55])
         # Select number of morbidities
-        nMorbidities = selectedWeightValue(multimordibity)
+        nMorbidities = min(26, max(0, np.random.geometric(1/5.95)))
         nEmpty = 26 - nMorbidities
         if nMorbidities == 0:
             simulated = [sex, age] + ((nEmpty * 2) * ['NULL'])
@@ -50,15 +46,6 @@ def simulateData(
             # Write output
             simulated = np.concatenate([[sex, age], simulatedMM, simTime])
         print(*simulated, sep=',')
-
-
-def selectedWeightValue(d: dict) -> int:
-    """ Function to randomly selected a value from
-        dictionary of keys and weights"""
-    choices = list(d.keys())
-    weights = np.array(list(d.values()))
-    weights /= weights.sum()
-    return np.random.choice(choices, p=weights)
 
 
 def sampleNodes(nodes: int, size: int, overlap: int, weight: float):
@@ -84,9 +71,6 @@ def sampleNodes(nodes: int, size: int, overlap: int, weight: float):
             else:
                 p[a+1:b:2] = weight
             p /= p.sum()
-            while True:
-                select = np.random.choice(list(range(nodes)), p=p)
-                if select not in allMM:
-                    break
+            select = np.random.choice(list(range(nodes)), p=p)
         allMM.append(select)
     return np.array(allMM)

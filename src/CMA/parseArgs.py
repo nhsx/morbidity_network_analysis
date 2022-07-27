@@ -6,7 +6,7 @@ import sys
 import CMA
 import logging
 import argparse
-from .main import main
+from .main import main, edgeAnalysisOnly, networkAnalysisOnly
 from .simulate import simulateData
 from ._version import __version__
 
@@ -25,37 +25,60 @@ def parseArgs() -> argparse.Namespace:
 
     sp1 = subparser.add_parser(
         'analyse',
-        description=CMA.main.__doc__,
-        help='Run Network Analysis.',
+        description=main.__doc__,
+        help='Run complete Network Analysis pipeline.',
         parents=[baseParser],
         epilog=parser.epilog)
     sp1.add_argument(
-        'config',
-        help='Provide name.')
+        'config', help='YAML configuration file.')
     sp1.set_defaults(function=main)
 
     sp2 = subparser.add_parser(
-        'simulate',
-        description=CMA.simulate.__doc__,
-        help='Simulate morbidity data.',
+        'process',
+        description=edgeAnalysisOnly.__doc__,
+        help='Pre-process data and compute edge weights.',
         parents=[baseParser],
         epilog=parser.epilog)
     sp2.add_argument(
+        'config', help='YAML configuration file.')
+    sp2.add_argument(
+        'out', help='Path to write edge data, pickle format.')
+    sp2.set_defaults(function=edgeAnalysisOnly)
+
+    sp3 = subparser.add_parser(
+        'network',
+        description=networkAnalysisOnly.__doc__,
+        help='Build and visualise network.',
+        parents=[baseParser],
+        epilog=parser.epilog)
+    sp3.add_argument(
+        'config', help='YAML configuration file.')
+    sp3.add_argument(
+        'edgeData', help='Output .csv file of "CMA process".')
+    sp3.set_defaults(function=networkAnalysisOnly)
+
+    sp4 = subparser.add_parser(
+        'simulate',
+        description=CMA.simulate.__doc__,
+        help='Simulate test data.',
+        parents=[baseParser],
+        epilog=parser.epilog)
+    sp4.add_argument(
         '--nodes', type=int, default=60,
         help='Total nodes in simulated network (default: %(default)s)')
-    sp2.add_argument(
+    sp4.add_argument(
         '--nRecords', type=int, default=20_000,
         help='Number of patient records to simulate (default: %(default)s)')
-    sp2.add_argument(
-        '--weight', type=float, default=5,
+    sp4.add_argument(
+        '--weight', type=float, default=100,
         help='Sampling weight for associated groups (default: %(default)s)')
-    sp2.add_argument(
+    sp4.add_argument(
         '--overlap', type=int, default=1,
         help='Co-occurence overlap (default: %(default)s)')
-    sp2.add_argument(
+    sp4.add_argument(
         '--seed', type=int, default=42,
         help='Seed for random number generator (default: %(default)s)')
-    sp2.set_defaults(function=simulateData)
+    sp4.set_defaults(function=simulateData)
 
     args = parser.parse_args()
     if 'function' not in args:
