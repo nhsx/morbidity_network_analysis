@@ -33,7 +33,7 @@ setup(
     author_email='stephen.richer@nhs.net',
     url='https://github.com/nhsx/morbidity_network_analysis',
     scripts=['bin/CMA'],
-    python_requires='>=3.9.0',
+    python_requires='>=3.8.0',
     install_requires=[
         'pyyaml',
         'numpy',
