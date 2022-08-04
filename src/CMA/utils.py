@@ -416,7 +416,6 @@ def networkAnalysis(config: str, allLinks):
         allLinks, stat='RR', minVal=1, alpha=config['alpha'], minObs=50)
 
     G = nx.DiGraph() if config['directed'] else nx.Graph()
-    print(G.is_directed())
     G.add_nodes_from(allNodes)
     G.add_weighted_edges_from(allEdges)
     nodeSummary = getNodeSummary(
