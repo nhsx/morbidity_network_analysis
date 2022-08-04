@@ -348,7 +348,6 @@ def networkAnalysis(config: str, allLinks):
     G = nx.DiGraph() if config['directed'] else nx.Graph()
     G.add_nodes_from(allNodes)
     G.add_weighted_edges_from(allEdges)
-
     validRefs = validateRefNode(config['refNode'], G)
     G = makeEgo(G, validRefs, config['directed'], radius=1)
     nodeSummary = getNodeSummary(
@@ -429,15 +428,15 @@ def getRefRGB(G, refNode, cmap=cm.viridis_r):
             if nx.has_path(G, ref, node):
                 dist = nx.dijkstra_path_length(G, ref, node, weight='weight')
             else:
-                dist = -1
+                dist = np.inf
             # Set value for first check
-            if (i == 0) or (refRGB[node] == -1):
+            if (i == 0):
                 refRGB[node] = dist
             else:
                 refRGB[node] = min(refRGB[node], dist)
     norm = Normalize(vmin=0, vmax=max(refRGB.values()))
     for node, val in refRGB.items():
-        if val == -1:
+        if val == np.inf:
             refRGB[node] = (0,0,0)
         else:
             refRGB[node] = cmap(norm(val))[:3]
