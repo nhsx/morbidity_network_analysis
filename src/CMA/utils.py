@@ -16,7 +16,6 @@ from scipy.sparse import csr_matrix
 import community as community_louvain
 from matplotlib.colors import rgb2hex
 from matplotlib.colors import Normalize
-from sklearn.preprocessing import minmax_scale
 from statsmodels.stats.multitest import fdrcorrection
 from statsmodels.stats.contingency_tables import StratifiedTable
 
@@ -357,15 +356,15 @@ def networkAnalysis(config: str, allLinks):
         G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
         G.nodes[node]['label'] = str(node)
         G.nodes[node]['font'] = {'size': 200}
-        alpha = nodeSummary.loc[node, 'alpha']
         if config['refNode']:
-            rgb = nodeSummary.loc[node, 'refRGB']
+            rgb = nodeSummary.loc[node, 'colour']
+            alpha = nodeSummary.loc[node, 'alpha']
             G.nodes[node]['color'] = rgb2hex((*rgb, alpha), keep_alpha=True)
 
     allEdges = {edge: 1 / G.edges[edge]['weight'] for edge in G.edges()}
     allEdges = pd.Series(allEdges).to_frame().rename({0: 'OR'}, axis=1)
     allEdges['logOR'] = np.log(allEdges['OR'])
-    allEdges['scaled'] = minmax_scale(allEdges['logOR'], (0.1, 1))
+    allEdges['scaled'] = MinMaxScaler(allEdges['logOR'], (0.1, 1))
     # Truncate to 1 in case of rounding error
     allEdges['scaled'] = allEdges['scaled'].apply(lambda x: x if x < 1 else 1)
     allEdges = allEdges['scaled'].to_dict()
@@ -395,86 +394,37 @@ def makeEgo(G, refNodes, directed, radius):
 
 
 def getNodeSummary(G, refNodes, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r):
-    centrality = getGraphCentality(G, alphaMin)
-    degree = getGraphDegree(G, size, scale)
-    summary = pd.merge(centrality, degree, left_index=True, right_index=True)
+    centrality = pd.Series(nx.betweenness_centrality(G,  weight='weight'), name='Betweeness')
+    degree = pd.DataFrame(G.degree()).set_index(0)[1].rename('Degree')
+    summary = pd.concat([centrality, degree], axis=1)
     if G.is_directed():
         logging.error('Community detection not supported for directed graphs.')
     else:
         partitionRGB = getNodePartion(G)
-        summary = pd.merge(summary, partitionRGB, left_index=True, right_index=True)
+        summary = pd.concat([summary, partitionRGB], axis=1)
     if refNodes:
-        refRGB = getRefRGB(G, refNodes, cmap)
-        summary = pd.merge(summary, refRGB, left_index=True, right_index=True)
+        refRGB = getRefDistance(G, refNodes)
+        summary = pd.concat([summary, refRGB], axis=1)
+    size=50
+    scale=10
+    assert (size > 0) and (scale > 1)
+    propertiesBy = 'refDistance' if refNodes else 'Betweeness'
+    summary['colour'] = setColour(summary, propertiesBy, cmap=cm.viridis_r)
+    reverse = False if propertiesBy == 'Degree' else True
+    summary['size'] = MinMaxScaler(
+        summary[propertiesBy].fillna(0), (size, size * scale), reverse)
+    summary['alpha'] = MinMaxScaler(
+        summary[propertiesBy].fillna(0), (alphaMin, 1), reverse)
     return summary
 
 
-def validateRefNode(refNodes, G):
-    """ Check to see if all reference nodes are in network """
-    validRefs = []
-    for ref in refNodes:
-        if ref not in G.nodes():
-            logging.error(f'{ref} not in network.')
-        else:
-            validRefs.append(ref)
-    return validRefs
-
-
-def getRefRGB(G, refNode, cmap=cm.viridis_r):
-    refRGB = {}
-    for node in sorted(G.nodes()):
-        if node in refNode:
-            refRGB[node] = np.nan
-            continue
-        for i, ref in enumerate(refNode):
-            if nx.has_path(G, ref, node):
-                dist = nx.dijkstra_path_length(G, ref, node, weight='weight')
-            else:
-                dist = np.nan
-            # Set value for first check
-            if (i == 0):
-                refRGB[node] = dist
-            elif not np.isnan(dist):
-                refRGB[node] = np.nanmin([refRGB[node], dist])
-    values = [v for v in refRGB.values() if not np.isnan(v)]
-    norm = Normalize(vmin=min(values), vmax=max(values))
-    for node, val in refRGB.items():
-        if val == np.nan:
-            refRGB[node] = (0,0,0)
-        else:
-            refRGB[node] = cmap(norm(val))[:3]
-    refRGB = pd.Series(refRGB).to_frame().rename({0: 'refRGB'}, axis=1)
-    return refRGB
-
-
-def processLinks(links, stat='OR', minVal=1, alpha=0.01, minObs=1):
-    assert stat in links.columns
-    # Force string type for pyvis
-    links[['Node1', 'Node2']] = links[['Node1', 'Node2']].astype(str)
-    allNodes = links[['Node1', 'Node2']].melt()['value'].drop_duplicates().tolist()
-    links['ICDpair'] = [tuple(r) for r in links[['Node1', 'Node2']].to_numpy()]
-    sigLinks = links.loc[
-        (links['FDR'] < alpha)
-        & (links[stat] > minVal)
-        & (links['minObs'] >= minObs)
-    ]
-    allEdges = sigLinks.apply(lambda x: (x['Node1'], x['Node2'], x['inverseOR']), axis=1).tolist()
-    return allNodes, allEdges
-
-
-def getGraphCentality(G, alphaMin=0.5):
-    assert 0 <= alphaMin < 1
-    centrality = nx.betweenness_centrality(G, weight='weight')
-    centrality = pd.Series(centrality).to_frame().rename({0: 'centrality'}, axis=1)
-    centrality['alpha'] = minmax_scale(centrality['centrality'], (alphaMin, 1))
-    return centrality
-
-
-def getGraphDegree(G, size=50, scale=10):
-    assert (size > 0) and (scale > 1)
-    degree = pd.DataFrame(G.degree()).set_index(0).rename({1: 'degree'}, axis=1)
-    degree['size'] = minmax_scale(degree['degree'], (size, size * scale))
-    return degree
+def setColour(summary, colourBy, cmap=cm.viridis_r):
+    values = summary[colourBy].dropna()
+    norm = Normalize(
+        vmin=np.nanmin(summary[colourBy]), vmax=np.nanmax(summary[colourBy]))
+    return summary[colourBy].apply(
+        lambda x: (0,0,0) if np.isnan(x) else cmap(norm(x))[:3]
+    )
 
 
 def getNodePartion(G, colours=None):
@@ -509,3 +459,61 @@ def getNodePartion(G, colours=None):
         lambda x: (x[0] / 255, x[1] / 255, x[2] / 255)
     )
     return partitionInfo
+
+
+def validateRefNode(refNodes, G):
+    """ Check to see if all reference nodes are in network """
+    validRefs = []
+    for ref in refNodes:
+        if ref not in G.nodes():
+            logging.error(f'{ref} not in network.')
+        else:
+            validRefs.append(ref)
+    return validRefs
+
+
+def getRefDistance(G, refNodes):
+    refRGB = {}
+    for node in sorted(G.nodes()):
+        if node in refNodes:
+            refRGB[node] = np.nan
+            continue
+        for i, ref in enumerate(refNodes):
+            if nx.has_path(G, ref, node):
+                dist = nx.dijkstra_path_length(G, ref, node, weight='weight')
+            else:
+                dist = np.nan
+            # Set value for first check
+            if (i == 0):
+                refRGB[node] = dist
+            elif not np.isnan(dist):
+                refRGB[node] = np.nanmin([refRGB[node], dist])
+    return pd.Series(refRGB).to_frame().rename({0: 'refDistance'}, axis=1)
+
+
+
+def processLinks(links, stat='OR', minVal=1, alpha=0.01, minObs=1):
+    assert stat in links.columns
+    # Force string type for pyvis
+    links[['Node1', 'Node2']] = links[['Node1', 'Node2']].astype(str)
+    allNodes = links[['Node1', 'Node2']].melt()['value'].drop_duplicates().tolist()
+    links['ICDpair'] = [tuple(r) for r in links[['Node1', 'Node2']].to_numpy()]
+    sigLinks = links.loc[
+        (links['FDR'] < alpha)
+        & (links[stat] > minVal)
+        & (links['minObs'] >= minObs)
+    ]
+    allEdges = sigLinks.apply(lambda x: (x['Node1'], x['Node2'], x['inverseOR']), axis=1).tolist()
+    return allNodes, allEdges
+
+
+def MinMaxScaler(x, feature_range=(0, 1), reverse=False):
+    """ Custom MinMax function that allows for reverse scaling """
+    x = np.array(x)
+    minV, maxV = feature_range
+    if reverse:
+        X_std = (max(x) - x) /  (max(x) - min(x))
+    else:
+        X_std = (x - min(x)) / (max(x) - min(x))
+    X_scaled = X_std * (maxV - minV) + minV
+    return X_scaled
