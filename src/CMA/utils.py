@@ -423,10 +423,11 @@ def validateRefNode(refNodes, G):
 def getRefRGB(G, refNode, cmap=cm.viridis_r):
     refRGB = {}
     for node in sorted(G.nodes()):
+        if node in refNode:
+            refRGB[node] = np.nan
+            continue
         for i, ref in enumerate(refNode):
-            if ref == node:
-                dist = np.nan
-            elif nx.has_path(G, ref, node):
+            if nx.has_path(G, ref, node):
                 dist = nx.dijkstra_path_length(G, ref, node, weight='weight')
             else:
                 dist = np.nan
