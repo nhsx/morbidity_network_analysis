@@ -102,13 +102,14 @@ def validateCols(df, config):
     if missingCols:
         logging.error(f'{missingCols} not present in {config["file"]}\n')
         raise ValueError
-    timeTypes = df[config['timeCols']].select_dtypes(
-        include=[np.number, np.datetime64])
-    invalidType = set(config['timeCols']) - set(timeTypes.columns)
-    if invalidType:
-        logging.error(
-            f'Invalid time type at columns {invalidType} in {config["file"]}\n')
-        raise ValueError
+    if config['directed']:
+        timeTypes = df[config['timeCols']].select_dtypes(
+            include=[np.number, np.datetime64])
+        invalidType = set(config['timeCols']) - set(timeTypes.columns)
+        if invalidType:
+            logging.error(
+                f'Invalid time type at columns {invalidType} in {config["file"]}\n')
+            raise ValueError
 
 
 def checkDuplicates(df, config):
@@ -415,6 +416,7 @@ def networkAnalysis(config: str, allLinks):
         allLinks, stat='RR', minVal=1, alpha=config['alpha'], minObs=50)
 
     G = nx.DiGraph() if config['directed'] else nx.Graph()
+    print(G.is_directed())
     G.add_nodes_from(allNodes)
     G.add_weighted_edges_from(allEdges)
     nodeSummary = getNodeSummary(
@@ -445,8 +447,8 @@ def networkAnalysis(config: str, allLinks):
     remove = [x for x in G.nodes() if G.degree(x) < minDegree]
     G.remove_nodes_from(remove)
 
-    net = Network(height='75%', width='75%', directed=G.is_directed)
+    net = Network(height='75%', width='75%', directed=G.is_directed())
     net.from_nx(G)
     net.toggle_physics(True)
     net.barnes_hut()
-    net.show('../example/exampleNet.html')
+    net.show('exampleNet.html')
