@@ -2,6 +2,7 @@
 
 """ Helper functions for command line interface """
 
+import sys
 import yaml
 import pprint
 import logging
@@ -12,6 +13,7 @@ import matplotlib.cm as cm
 from pyvis.network import Network
 from itertools import combinations
 from scipy.sparse import csr_matrix
+import community as community_louvain
 from matplotlib.colors import rgb2hex
 from matplotlib.colors import Normalize
 from sklearn.preprocessing import minmax_scale
@@ -70,6 +72,7 @@ class Config():
             'strata': None,
             'seperator': None,
             'chunksize': None,
+            'refNode': None,
             'alpha': 0.01
         })
 
@@ -79,6 +82,8 @@ class Config():
         config['allCols'] = []
         if config['strata'] is not None:
             config['allCols'] += config['strata']
+        if config['refNode'] is not None:
+            config['refNode'] = str(config['refNode'])
         if isinstance(config['codes'], list):
             config['directed'] = False
             config['codeCols'] = config['codes']
@@ -311,6 +316,99 @@ def runEdgeAnalysis(df_sp, codePairs):
     return allLinks
 
 
+def edgeAnalysis(config: str):
+    config = Config(config).config
+    df = loadData(config)
+    # Retrieve full index (including records with no morbidities)
+    fullIndex = getFullIndex(df)
+    codePairs = getMMFrequency(df)
+    df_long = getICDlong(df)
+    df_sp = df2Sparse(df_long, fullIndex)
+    indices = retrieveIndices(df_sp)
+    allLinks = runEdgeAnalysis(df_sp, codePairs)
+    return allLinks, config
+
+
+def networkAnalysis(config: str, allLinks):
+    allNodes, allEdges = processLinks(
+        allLinks, stat='RR', minVal=1, alpha=config['alpha'], minObs=50)
+
+    G = nx.DiGraph() if config['directed'] else nx.Graph()
+    G.add_nodes_from(allNodes)
+    G.add_weighted_edges_from(allEdges)
+    nodeSummary = getNodeSummary(
+        G, config, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis)
+    colourBy = 'refNode' if config['refNode'] else 'nodeRGB'
+    for node in G.nodes():
+        G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
+        G.nodes[node]['label'] = str(node)
+        G.nodes[node]['font'] = {'size': 200}
+        alpha = nodeSummary.loc[node, 'alpha']
+        if config['refNode'] is not None:
+            rgb = nodeSummary.loc[node, 'refRGB']
+            G.nodes[node]['color'] = rgb2hex((*rgb, alpha), keep_alpha=True)
+
+    allEdges = {edge: G.edges[edge]['weight'] for edge in G.edges()}
+    allEdges = pd.Series(allEdges).to_frame().rename({0: 'OR'}, axis=1)
+    allEdges['logOR'] = np.log(allEdges['OR'])
+    allEdges['scaled'] = minmax_scale(allEdges['logOR'], (0.1, 1))
+    # Truncate to 1 in case of rounding error
+    allEdges['scaled'] = allEdges['scaled'].apply(lambda x: x if x < 1 else 1)
+    allEdges = allEdges['scaled'].to_dict()
+
+    for edge in G.edges():
+        weight = G.edges[edge]['weight']
+        G.edges[edge]['width'] = np.log(G.edges[edge]['weight'])
+        G.edges[edge]['color'] = rgb2hex((0, 0, 0, allEdges[edge]), keep_alpha=True)
+
+    minDegree = 0
+    remove = [x for x in G.nodes() if G.degree(x) < minDegree]
+    G.remove_nodes_from(remove)
+
+    net = Network(height='75%', width='75%', directed=G.is_directed())
+    net.from_nx(G)
+    net.toggle_physics(True)
+    net.barnes_hut()
+    net.show('exampleNet.html')
+
+
+def getNodeSummary(G, config, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r):
+    centrality = getGraphCentality(G, alphaMin)
+    degree = getGraphDegree(G, size, scale)
+    summary = pd.merge(centrality, degree, left_index=True, right_index=True)
+    if G.is_directed():
+        logging.error('Community detection not supported for directed graphs.')
+    else:
+        partitionRGB = getNodePartion(G)
+        summary = pd.merge(summary, partitionRGB, left_index=True, right_index=True)
+    if (config['refNode'] is not None):
+        if config['refNode'] not in G.nodes():
+            logging.error(f'{config["refNode"]} not in network.')
+            config['refNode'] = None
+        else:
+            refRGB = getRefRGB(G, config['refNode'], cmap)
+            summary = pd.merge(summary, refRGB, left_index=True, right_index=True)
+    return summary
+
+
+def getRefRGB(G, refNode, cmap=cm.viridis_r):
+    refRGB = {}
+    for i, node in enumerate(sorted(G.nodes())):
+        if nx.has_path(G, refNode, node):
+            dist = nx.shortest_path(G, refNode, node)
+            refRGB[node] = len(dist) - 1
+        else:
+            refRGB[node] = -1
+    norm = Normalize(vmin=0, vmax=max(refRGB.values()))
+    for node, val in refRGB.items():
+        if val == -1:
+            refRGB[node] = (0,0,0)
+        else:
+            refRGB[node] = cmap(norm(val))[:3]
+    refRGB = pd.Series(refRGB).to_frame().rename({0: 'refRGB'}, axis=1)
+    return refRGB
+
+
 def processLinks(links, stat='OR', minVal=1, alpha=0.01, minObs=1):
     assert stat in links.columns
     # Force string type for pyvis
@@ -373,81 +471,3 @@ def getNodePartion(G, colours=None):
         lambda x: (x[0] / 255, x[1] / 255, x[2] / 255)
     )
     return partitionInfo
-
-
-def getNodeRGB(G, cmap=cm.viridis):
-    norm = Normalize(vmin=0, vmax=(len(G.nodes()) - 1))
-    nodeRGB = {}
-    for i, node in enumerate(sorted(G.nodes())):
-        nodeRGB[node] = cmap(norm(i))[:3]
-    nodeRGB = pd.Series(nodeRGB).to_frame().rename({0: 'nodeRGB'}, axis=1)
-    return nodeRGB
-
-
-def getNodeSummary(G, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis):
-    centrality = getGraphCentality(G, alphaMin)
-    degree = getGraphDegree(G, size, scale)
-    nodeRGB = getNodeRGB(G, cmap)
-    summary = pd.merge(centrality, degree, left_index=True, right_index=True)
-    if G.is_directed:
-        logging.error('Community detection not supported for directed graphs.')
-    else:
-        partitionRGB = getNodePartion(G)
-        summary = pd.merge(summary, partitionRGB, left_index=True, right_index=True)
-    summary = pd.merge(summary, nodeRGB, left_index=True, right_index=True)
-    return summary
-
-
-def edgeAnalysis(config: str):
-    config = Config(config).config
-    df = loadData(config)
-    # Retrieve full index (including records with no morbidities)
-    fullIndex = getFullIndex(df)
-    codePairs = getMMFrequency(df)
-    df_long = getICDlong(df)
-    df_sp = df2Sparse(df_long, fullIndex)
-    indices = retrieveIndices(df_sp)
-    allLinks = runEdgeAnalysis(df_sp, codePairs)
-    return allLinks, config
-
-
-def networkAnalysis(config: str, allLinks):
-    allNodes, allEdges = processLinks(
-        allLinks, stat='RR', minVal=1, alpha=config['alpha'], minObs=50)
-
-    G = nx.DiGraph() if config['directed'] else nx.Graph()
-    G.add_nodes_from(allNodes)
-    G.add_weighted_edges_from(allEdges)
-    nodeSummary = getNodeSummary(
-        G, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis)
-    colourBy = 'node'
-    for node in G.nodes():
-        G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
-        G.nodes[node]['label'] = str(node)
-        G.nodes[node]['font'] = {'size': 200}
-        alpha = nodeSummary.loc[node, 'alpha']
-        rgb = nodeSummary.loc[node, f'{colourBy}RGB']
-        G.nodes[node]['color'] = rgb2hex((*rgb, alpha), keep_alpha=True)
-
-    allEdges = {edge: G.edges[edge]['weight'] for edge in G.edges()}
-    allEdges = pd.Series(allEdges).to_frame().rename({0: 'OR'}, axis=1)
-    allEdges['logOR'] = np.log(allEdges['OR'])
-    allEdges['scaled'] = minmax_scale(allEdges['logOR'], (0.1, 1))
-    # Truncate to 1 in case of rounding error
-    allEdges['scaled'] = allEdges['scaled'].apply(lambda x: x if x < 1 else 1)
-    allEdges = allEdges['scaled'].to_dict()
-
-    for edge in G.edges():
-        weight = G.edges[edge]['weight']
-        G.edges[edge]['width'] = np.log(G.edges[edge]['weight'])
-        G.edges[edge]['color'] = rgb2hex((0, 0, 0, allEdges[edge]), keep_alpha=True)
-
-    minDegree = 0
-    remove = [x for x in G.nodes() if G.degree(x) < minDegree]
-    G.remove_nodes_from(remove)
-
-    net = Network(height='75%', width='75%', directed=G.is_directed())
-    net.from_nx(G)
-    net.toggle_physics(True)
-    net.barnes_hut()
-    net.show('exampleNet.html')
