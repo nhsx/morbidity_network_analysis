@@ -73,7 +73,8 @@ class Config():
             'seperator': None,
             'chunksize': None,
             'refNode': None,
-            'alpha': 0.01
+            'alpha': 0.01,
+            'minDegree': 0
         })
 
     def _postProcessConfig(self):
@@ -84,6 +85,11 @@ class Config():
             config['allCols'] += config['strata']
         if config['refNode'] is not None:
             config['refNode'] = str(config['refNode'])
+        if not isinstance(config['minDegree'], int):
+            logging.error(
+                'Non-integer argument passed to config: minDegree '
+                f'({config["minDegree"]}) setting to 0.')
+            config['minDegree'] = 0
         if isinstance(config['codes'], list):
             config['directed'] = False
             config['codeCols'] = config['codes']
@@ -361,8 +367,7 @@ def networkAnalysis(config: str, allLinks):
         G.edges[edge]['width'] = np.log(G.edges[edge]['weight'])
         G.edges[edge]['color'] = rgb2hex((0, 0, 0, allEdges[edge]), keep_alpha=True)
 
-    minDegree = 0
-    remove = [x for x in G.nodes() if G.degree(x) < minDegree]
+    remove = [x for x in G.nodes() if G.degree(x) < config['minDegree']]
     G.remove_nodes_from(remove)
 
     net = Network(height='75%', width='75%', directed=G.is_directed())
