@@ -78,10 +78,10 @@ CMA simulate > CMA-example.csv
 
 ### Stage 1 - Processing input and generate edge weights.
 The ```process``` sub-command reads the input data and performs a stratified odds-ratio test (Mantel-Haenszel method) for each pair of morbidities.
-The output of this analysis is written to a pickle file in preparation for network construction and visualisation.
+The output of this analysis is written to a CSV file in preparation for network construction and visualisation.
 
 ```bash
-CMA process config.yaml processed.pkl
+CMA process config.yaml processed.csv
 ```
 
 ### Stage 2 - Network Construction and Visualisation
@@ -89,7 +89,7 @@ The ```network``` sub-command parses the output of ```CMA process``` into a netw
 Currently the output is written to a file called ```exampleNet.html```.
 
 ```bash
-CMA network config.yaml processed.pkl
+CMA network config.yaml processed.csv
 ```
 
 ### Alternative Method - Run Full Workflow

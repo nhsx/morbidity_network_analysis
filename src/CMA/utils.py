@@ -323,6 +323,9 @@ def runEdgeAnalysis(df_sp, codePairs):
     allLinks.loc[allLinks['pNull'].notna(), 'FDR'] = (
         fdrcorrection(allLinks.loc[allLinks['pNull'].notna(), 'pNull'])[1]
     )
+    # Larger odds ratio = smaller edge
+    allLinks['inverseOR'] = 1 / allLinks['OR']
+    
     return allLinks
 
 
@@ -368,7 +371,8 @@ def networkAnalysis(config: str, allLinks):
 
     for edge in G.edges():
         weight = G.edges[edge]['weight']
-        G.edges[edge]['width'] = np.log(G.edges[edge]['weight'])
+        # Invert weight to get larger width for larger odds ratio
+        G.edges[edge]['width'] = np.log(1 / G.edges[edge]['weight'])
         G.edges[edge]['color'] = rgb2hex((0, 0, 0, allEdges[edge]), keep_alpha=True)
 
     remove = [x for x in G.nodes() if G.degree(x) < config['minDegree']]
@@ -416,7 +420,6 @@ def getRefRGB(G, refNode, cmap=cm.viridis_r):
         for i, ref in enumerate(refNode):
             if nx.has_path(G, ref, node):
                 dist = nx.dijkstra_path_length(G, ref, node, weight='weight')
-                print(dist, ref, node)
             else:
                 dist = -1
             # Set value for first check
@@ -430,6 +433,7 @@ def getRefRGB(G, refNode, cmap=cm.viridis_r):
             refRGB[node] = (0,0,0)
         else:
             refRGB[node] = cmap(norm(val))[:3]
+            print(refRGB[node])
     refRGB = pd.Series(refRGB).to_frame().rename({0: 'refRGB'}, axis=1)
     return refRGB
 
@@ -445,7 +449,7 @@ def processLinks(links, stat='OR', minVal=1, alpha=0.01, minObs=1):
         & (links[stat] > minVal)
         & (links['minObs'] >= minObs)
     ]
-    allEdges = sigLinks.apply(lambda x: (x['Node1'], x['Node2'], x['OR']), axis=1).tolist()
+    allEdges = sigLinks.apply(lambda x: (x['Node1'], x['Node2'], x['inverseOR']), axis=1).tolist()
     return allNodes, allEdges
 
 
