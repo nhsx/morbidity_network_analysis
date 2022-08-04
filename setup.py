@@ -45,7 +45,6 @@ setup(
         'pyvis',
         'scipy',
         'python-louvain',
-        'scikit-learn',
         'statsmodels'
     ],
     license='MIT',
