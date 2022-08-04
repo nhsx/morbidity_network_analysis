@@ -362,7 +362,7 @@ def networkAnalysis(config: str, allLinks):
             rgb = nodeSummary.loc[node, 'refRGB']
             G.nodes[node]['color'] = rgb2hex((*rgb, alpha), keep_alpha=True)
 
-    allEdges = {edge: G.edges[edge]['weight'] for edge in G.edges()}
+    allEdges = {edge: 1 / G.edges[edge]['weight'] for edge in G.edges()}
     allEdges = pd.Series(allEdges).to_frame().rename({0: 'OR'}, axis=1)
     allEdges['logOR'] = np.log(allEdges['OR'])
     allEdges['scaled'] = minmax_scale(allEdges['logOR'], (0.1, 1))
@@ -371,7 +371,6 @@ def networkAnalysis(config: str, allLinks):
     allEdges = allEdges['scaled'].to_dict()
 
     for edge in G.edges():
-        weight = G.edges[edge]['weight']
         # Invert weight to get larger width for larger odds ratio
         G.edges[edge]['width'] = np.log(1 / G.edges[edge]['weight'])
         G.edges[edge]['color'] = rgb2hex((0, 0, 0, allEdges[edge]), keep_alpha=True)
@@ -425,18 +424,21 @@ def getRefRGB(G, refNode, cmap=cm.viridis_r):
     refRGB = {}
     for node in sorted(G.nodes()):
         for i, ref in enumerate(refNode):
-            if nx.has_path(G, ref, node):
+            if ref == node:
+                dist = np.nan
+            elif nx.has_path(G, ref, node):
                 dist = nx.dijkstra_path_length(G, ref, node, weight='weight')
             else:
-                dist = np.inf
+                dist = np.nan
             # Set value for first check
             if (i == 0):
                 refRGB[node] = dist
-            else:
-                refRGB[node] = min(refRGB[node], dist)
-    norm = Normalize(vmin=0, vmax=max(refRGB.values()))
+            elif not np.isnan(dist):
+                refRGB[node] = np.nanmin([refRGB[node], dist])
+    values = [v for v in refRGB.values() if not np.isnan(v)]
+    norm = Normalize(vmin=min(values), vmax=max(values))
     for node, val in refRGB.items():
-        if val == np.inf:
+        if val == np.nan:
             refRGB[node] = (0,0,0)
         else:
             refRGB[node] = cmap(norm(val))[:3]
