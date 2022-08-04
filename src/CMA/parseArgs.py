@@ -6,6 +6,7 @@ import sys
 import CMA
 import logging
 import argparse
+from timeit import default_timer as timer
 from .main import main, edgeAnalysisOnly, networkAnalysisOnly
 from .simulate import simulateData
 from ._version import __version__
@@ -85,7 +86,23 @@ def parseArgs() -> argparse.Namespace:
         parser.print_help()
         sys.exit()
 
-    return args
+    rc = executeCommand(args)
+    return rc
+
+
+def executeCommand(args):
+    # Initialise logging
+    logFormat = '%(asctime)s - %(levelname)s - %(funcName)s - %(message)s'
+    logging.basicConfig(level=args.verbose, format=logFormat)
+    del args.verbose, args.command
+    # Pop main function and excute script
+    function = args.__dict__.pop('function')
+    start = timer()
+    rc = function(**vars(args))
+    end = timer()
+    logging.info(f'Total execution time: {end - start:.3f} seconds.')
+    logging.shutdown()
+    return rc
 
 
 def getBaseParser(version: str) -> argparse.Namespace:
