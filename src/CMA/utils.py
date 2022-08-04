@@ -73,7 +73,8 @@ class Config():
             'chunksize': None,
             'refNode': [],
             'alpha': 0.01,
-            'minDegree': 0
+            'minDegree': 0,
+            'radius': 2
         })
 
     def _postProcessConfig(self):
@@ -87,11 +88,12 @@ class Config():
             config['refNode'] = [config['refNode']]
         # Convert to string
         config['refNode'] = [str(node) for node in config['refNode']]
-        if not isinstance(config['minDegree'], int):
-            logging.error(
-                'Non-integer argument passed to config: minDegree '
-                f'({config["minDegree"]}) setting to 0.')
-            config['minDegree'] = 0
+        for par in ['minDegree', 'radius']:
+            if not isinstance(config[par], int):
+                logging.error(
+                    f'Non-integer argument passed to config: {par} '
+                    f'({config[par]}) setting to {self.default[par]}.')
+                config[par] = self.default[par]
         if isinstance(config['codes'], list):
             config['directed'] = False
             config['codeCols'] = config['codes']
@@ -348,7 +350,7 @@ def networkAnalysis(config: str, allLinks):
     G.add_nodes_from(allNodes)
     G.add_weighted_edges_from(allEdges)
     validRefs = validateRefNode(config['refNode'], G)
-    G = makeEgo(G, validRefs, config['directed'], radius=1)
+    G = makeEgo(G, validRefs, config['directed'], radius=config['radius'])
     nodeSummary = getNodeSummary(
         G, validRefs, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r)
 
