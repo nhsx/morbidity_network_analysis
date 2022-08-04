@@ -391,7 +391,7 @@ def makeEgo(G, refNodes, directed, radius):
     if not refNodes: return G
     newG = nx.DiGraph() if directed else nx.Graph()
     for ref in refNodes:
-        newG.update(nx.ego_graph(G, n=ref, radius=1, undirected=True))
+        newG.update(nx.ego_graph(G, n=ref, radius=radius, undirected=True))
     return newG.copy()
 
 
