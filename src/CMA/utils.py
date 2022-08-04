@@ -84,7 +84,11 @@ class Config():
         if config['strata'] is not None:
             config['allCols'] += config['strata']
         if config['refNode'] is not None:
-            config['refNode'] = str(config['refNode'])
+            # Ensure single value is in list
+            if not isinstance(config['refNode'], list):
+                config['refNode'] = [config['refNode']]
+            # Convert to string
+            config['refNode'] = [str(node) for node in config['refNode']]
         if not isinstance(config['minDegree'], int):
             logging.error(
                 'Non-integer argument passed to config: minDegree '
@@ -343,7 +347,7 @@ def networkAnalysis(config: str, allLinks):
     G.add_nodes_from(allNodes)
     G.add_weighted_edges_from(allEdges)
     nodeSummary = getNodeSummary(
-        G, config, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis)
+        G, config, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r)
     colourBy = 'refNode' if config['refNode'] else 'nodeRGB'
     for node in G.nodes():
         G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
@@ -387,23 +391,38 @@ def getNodeSummary(G, config, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r
         partitionRGB = getNodePartion(G)
         summary = pd.merge(summary, partitionRGB, left_index=True, right_index=True)
     if (config['refNode'] is not None):
-        if config['refNode'] not in G.nodes():
-            logging.error(f'{config["refNode"]} not in network.')
-            config['refNode'] = None
-        else:
-            refRGB = getRefRGB(G, config['refNode'], cmap)
+        validRefs = validateRefNode(config['refNode'], G)
+        if validRefs:
+            refRGB = getRefRGB(G, validRefs, cmap)
             summary = pd.merge(summary, refRGB, left_index=True, right_index=True)
     return summary
 
 
+def validateRefNode(refNodes, G):
+    """ Check to see if all reference nodes are in network """
+    validRefs = []
+    for ref in refNodes:
+        if ref not in G.nodes():
+            logging.error(f'{ref} not in network.')
+        else:
+            validRefs.append(ref)
+
+    return validRefs
+
+
 def getRefRGB(G, refNode, cmap=cm.viridis_r):
     refRGB = {}
-    for i, node in enumerate(sorted(G.nodes())):
-        if nx.has_path(G, refNode, node):
-            dist = nx.shortest_path(G, refNode, node)
-            refRGB[node] = len(dist) - 1
-        else:
-            refRGB[node] = -1
+    for node in sorted(G.nodes()):
+        for i, ref in enumerate(refNode):
+            if nx.has_path(G, ref, node):
+                dist = len(nx.shortest_path(G, ref, node)) - 1
+            else:
+                dist = -1
+            # Set value for first check
+            if (i == 0) or (refRGB[node] == -1):
+                refRGB[node] = dist
+            else:
+                refRGB[node] = min(refRGB[node], dist)
     norm = Normalize(vmin=0, vmax=max(refRGB.values()))
     for node, val in refRGB.items():
         if val == -1:
