@@ -415,7 +415,7 @@ def getRefRGB(G, refNode, cmap=cm.viridis_r):
     for node in sorted(G.nodes()):
         for i, ref in enumerate(refNode):
             if nx.has_path(G, ref, node):
-                dist = len(nx.shortest_path(G, ref, node)) - 1
+                dist = nx.dijkstra_path_length(G, ref, node, weight='weight')
             else:
                 dist = -1
             # Set value for first check
