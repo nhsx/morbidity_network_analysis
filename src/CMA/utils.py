@@ -72,7 +72,7 @@ class Config():
             'strata': None,
             'seperator': None,
             'chunksize': None,
-            'refNode': None,
+            'refNode': [],
             'alpha': 0.01,
             'minDegree': 0
         })
@@ -83,12 +83,11 @@ class Config():
         config['allCols'] = []
         if config['strata'] is not None:
             config['allCols'] += config['strata']
-        if config['refNode'] is not None:
-            # Ensure single value is in list
-            if not isinstance(config['refNode'], list):
-                config['refNode'] = [config['refNode']]
-            # Convert to string
-            config['refNode'] = [str(node) for node in config['refNode']]
+        # Ensure single value is in list
+        if not isinstance(config['refNode'], list):
+            config['refNode'] = [config['refNode']]
+        # Convert to string
+        config['refNode'] = [str(node) for node in config['refNode']]
         if not isinstance(config['minDegree'], int):
             logging.error(
                 'Non-integer argument passed to config: minDegree '
@@ -325,7 +324,7 @@ def runEdgeAnalysis(df_sp, codePairs):
     )
     # Larger odds ratio = smaller edge
     allLinks['inverseOR'] = 1 / allLinks['OR']
-    
+
     return allLinks
 
 
@@ -349,15 +348,18 @@ def networkAnalysis(config: str, allLinks):
     G = nx.DiGraph() if config['directed'] else nx.Graph()
     G.add_nodes_from(allNodes)
     G.add_weighted_edges_from(allEdges)
+
+    validRefs = validateRefNode(config['refNode'], G)
+    G = makeEgo(G, validRefs, config['directed'], radius=1)
     nodeSummary = getNodeSummary(
-        G, config, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r)
-    colourBy = 'refNode' if config['refNode'] else 'nodeRGB'
+        G, validRefs, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r)
+
     for node in G.nodes():
         G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
         G.nodes[node]['label'] = str(node)
         G.nodes[node]['font'] = {'size': 200}
         alpha = nodeSummary.loc[node, 'alpha']
-        if config['refNode'] is not None:
+        if config['refNode']:
             rgb = nodeSummary.loc[node, 'refRGB']
             G.nodes[node]['color'] = rgb2hex((*rgb, alpha), keep_alpha=True)
 
@@ -385,7 +387,16 @@ def networkAnalysis(config: str, allLinks):
     net.show('exampleNet.html')
 
 
-def getNodeSummary(G, config, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r):
+def makeEgo(G, refNodes, directed, radius):
+    """ Subset graph based on distance to reference nodes """
+    if not refNodes: return G
+    newG = nx.DiGraph() if directed else nx.Graph()
+    for ref in refNodes:
+        newG.update(nx.ego_graph(G, n=ref, radius=1, undirected=True))
+    return newG.copy()
+
+
+def getNodeSummary(G, refNodes, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r):
     centrality = getGraphCentality(G, alphaMin)
     degree = getGraphDegree(G, size, scale)
     summary = pd.merge(centrality, degree, left_index=True, right_index=True)
@@ -394,11 +405,9 @@ def getNodeSummary(G, config, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r
     else:
         partitionRGB = getNodePartion(G)
         summary = pd.merge(summary, partitionRGB, left_index=True, right_index=True)
-    if (config['refNode'] is not None):
-        validRefs = validateRefNode(config['refNode'], G)
-        if validRefs:
-            refRGB = getRefRGB(G, validRefs, cmap)
-            summary = pd.merge(summary, refRGB, left_index=True, right_index=True)
+    if refNodes:
+        refRGB = getRefRGB(G, refNodes, cmap)
+        summary = pd.merge(summary, refRGB, left_index=True, right_index=True)
     return summary
 
 
@@ -410,7 +419,6 @@ def validateRefNode(refNodes, G):
             logging.error(f'{ref} not in network.')
         else:
             validRefs.append(ref)
-
     return validRefs
 
 
@@ -433,7 +441,6 @@ def getRefRGB(G, refNode, cmap=cm.viridis_r):
             refRGB[node] = (0,0,0)
         else:
             refRGB[node] = cmap(norm(val))[:3]
-            print(refRGB[node])
     refRGB = pd.Series(refRGB).to_frame().rename({0: 'refRGB'}, axis=1)
     return refRGB
 
