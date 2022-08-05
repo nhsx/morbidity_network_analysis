@@ -271,7 +271,6 @@ def makeStratifiedTable(
 ) -> np.array:
     """ Generate set of stratified contigency tables """
     ctTables = []
-    exclude = None # REMOVE THIS
     if exclude is None:
         exclude = np.zeros(len(a1)).astype(bool)
     a1 = a1[~exclude].copy()
@@ -379,7 +378,7 @@ def networkAnalysis(config: str, allLinks):
     remove = [x for x in G.nodes() if G.degree(x) < config['minDegree']]
     G.remove_nodes_from(remove)
 
-    net = Network(height='75%', width='75%', directed=G.is_directed())
+    net = Network(height='85%', width='75%', directed=G.is_directed())
     net.from_nx(G)
     net.toggle_physics(True)
     net.barnes_hut()
