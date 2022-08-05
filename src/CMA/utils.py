@@ -283,6 +283,7 @@ def makeStratifiedTable(
         ctTables.append(ct)
     return np.array(ctTables).swapaxes(0, 2)
 
+
 def retrieveIndices(df: pd.DataFrame) -> list:
     """ Retrieve per-strata indices """
     indices = []
@@ -291,26 +292,31 @@ def retrieveIndices(df: pd.DataFrame) -> list:
     return indices
 
 
-def stratifiedOdds(a1, a2, indices, excludeAll):
-    # Direction specific exclusion
-    bothNonZero = (a1 != 0) & (a2 != 0)
-    exclude = (a1 >= a2) & bothNonZero
-    tables = makeStratifiedTable(
-        a1, a2, indices,  (exclude | excludeAll))
+def stratifiedOdds(a1, a2, indices, directed, excludeAll=None):
+    if directed:
+        # Direction specific exclusion
+        bothNonZero = (a1 != 0) & (a2 != 0)
+        exclude = ((a1 >= a2) & bothNonZero) | excludeAll
+    else:
+        exclude = None
+    tables = makeStratifiedTable(a1, a2, indices, exclude)
     minObs = np.sum(tables, axis=2).min()
     k = StratifiedTable(tables)
     return k, minObs
 
 
-def runEdgeAnalysis(df_sp, codePairs):
+def runEdgeAnalysis(df_sp, codePairs, directed):
     indices = retrieveIndices(df_sp)
     allLinks = []
     for i, ((m1, m2), count) in enumerate(codePairs.iteritems()):
         a1 = np.array(df_sp[m1])
         a2 = np.array(df_sp[m2])
-        # Exclude amiguous / missing time stamps
-        excludeAll = ((a1 == -1) & (a2 != 0)) | ((a2 == -1) & (a1 != 0))
-        k, minObs = stratifiedOdds(a1, a2, indices, excludeAll)
+        if directed:
+            # Exclude amiguous / missing time stamps
+            excludeAll = ((a1 == -1) & (a2 != 0)) | ((a2 == -1) & (a1 != 0))
+        else:
+            excludeAll = None
+        k, minObs = stratifiedOdds(a1, a2, indices, directed, excludeAll)
         allLinks.append([
             m1, m2, count, minObs, k.oddsratio_pooled,
             k.riskratio_pooled, k.test_equal_odds().pvalue,
@@ -336,8 +342,7 @@ def edgeAnalysis(config: str):
     codePairs = getMMFrequency(df)
     df_long = getICDlong(df)
     df_sp = df2Sparse(df_long, fullIndex)
-    indices = retrieveIndices(df_sp)
-    allLinks = runEdgeAnalysis(df_sp, codePairs)
+    allLinks = runEdgeAnalysis(df_sp, codePairs, config['directed'])
     return allLinks, config
 
 
