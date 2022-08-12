@@ -19,6 +19,7 @@ from matplotlib.colors import Normalize
 from statsmodels.stats.multitest import fdrcorrection
 from statsmodels.stats.contingency_tables import StratifiedTable
 
+
 class Config():
     """ Custom class to read, validate and
         set defaults of YAML configuration file
@@ -173,7 +174,6 @@ def prepareData(df: pd.DataFrame, config: dict, keepStrata: bool = False) -> pd.
         Processed DataFrame of strata and ICD-10 codes.
     """
     args = (config['codeCols'], config['timeCols'])
-    df = df.astype({col: str for col in config['codeCols']})
     df[['codes', 'time']] = df.apply(extractCodeTimes, args=args, axis=1)
     if config['strata']:
         df['strata'] = df[config['strata']].apply(tuple, axis=1)
@@ -189,10 +189,12 @@ def prepareData(df: pd.DataFrame, config: dict, keepStrata: bool = False) -> pd.
 
 def loadData(config: dict, keepStrata: bool = False) -> pd.DataFrame:
     """ Main function for loading data """
-    #config = loadConfig(config)
+    # Enfore codes as strings
+    dtypes = {col: str for col in config['codeCols']}
     data = pd.read_csv(
         config['file'], sep=config['seperator'],
-        chunksize=config['chunksize'], iterator=True
+        chunksize=config['chunksize'],
+        dtype=dtypes, iterator=True
     )
     allData = []
     rowsWithDups = []
@@ -203,7 +205,7 @@ def loadData(config: dict, keepStrata: bool = False) -> pd.DataFrame:
         # Check for duplicate names
         checkDuplicates(chunk, config)
         allData.append(prepareData(chunk, config, keepStrata))
-    allData = pd.concat(allData)
+    allData = pd.concat(allData).fillna('')
     allData.attrs['directed'] = config['directed']
     return allData
 
@@ -286,8 +288,10 @@ def makeStratifiedTable(
             2 * a1[s[~exclude]].astype(bool)
             + a2[s[~exclude]].astype(bool),
             minlength=4).reshape(2,2)
+        if (ct == 0).any():
+            continue
         ctTables.append(ct)
-    return np.array(ctTables).swapaxes(0, 2)
+    return ctTables
 
 
 def retrieveIndices(df: pd.DataFrame) -> list:
@@ -306,6 +310,8 @@ def stratifiedOdds(a1, a2, indices, directed, excludeAll=None):
     else:
         exclude = None
     tables = makeStratifiedTable(a1, a2, indices, exclude)
+    if not tables:
+        return (None, None)
     minObs = np.sum(tables, axis=2).min()
     k = StratifiedTable(tables)
     return k, minObs
@@ -322,7 +328,9 @@ def runEdgeAnalysis(df_sp, codePairs, directed):
             excludeAll = ((a1 == -1) & (a2 != 0)) | ((a2 == -1) & (a1 != 0))
         else:
             excludeAll = None
-        k, minObs = stratifiedOdds(a1, a2, indices, directed, excludeAll)
+        k, minObs, tables = stratifiedOdds(a1, a2, indices, directed, excludeAll)
+        if k is None:
+            continue
         allLinks.append([
             m1, m2, count, minObs, k.oddsratio_pooled,
             k.riskratio_pooled, k.test_equal_odds().pvalue,
@@ -336,6 +344,7 @@ def runEdgeAnalysis(df_sp, codePairs, directed):
     )
     # Larger odds ratio = smaller edge
     allLinks['inverseOR'] = 1 / allLinks['OR']
+    allLinks['inverseRR'] = 1 / allLinks['RR']
 
     return allLinks
 
@@ -361,17 +370,17 @@ def networkAnalysis(config: str, allLinks):
     G.add_weighted_edges_from(allEdges)
     validRefs = validateRefNode(config['refNode'], G)
     G = makeEgo(G, validRefs, config['directed'], radius=config['radius'])
+    cmap = cm.viridis_r if config['refNode'] else cm.viridis
     nodeSummary = getNodeSummary(
-        G, validRefs, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r)
+        G, validRefs, alphaMin=0.5, size=50, scale=10, cmap=cmap)
 
     for node in G.nodes():
         G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
         G.nodes[node]['label'] = str(node)
         G.nodes[node]['font'] = {'size': 200}
-        if config['refNode']:
-            rgb = nodeSummary.loc[node, 'colour']
-            alpha = nodeSummary.loc[node, 'alpha']
-            G.nodes[node]['color'] = rgb2hex((*rgb, alpha), keep_alpha=True)
+        rgb = nodeSummary.loc[node, 'colour']
+        alpha = nodeSummary.loc[node, 'alpha']
+        G.nodes[node]['color'] = rgb2hex((*rgb, alpha), keep_alpha=True)
 
     allEdges = {edge: 1 / G.edges[edge]['weight'] for edge in G.edges()}
     allEdges = pd.Series(allEdges).to_frame().rename({0: 'OR'}, axis=1)
@@ -410,7 +419,7 @@ def getNodeSummary(G, refNodes, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis
     degree = pd.DataFrame(G.degree()).set_index(0)[1].rename('Degree')
     summary = pd.concat([centrality, degree], axis=1)
     if G.is_directed():
-        logging.error('Community detection not supported for directed graphs.')
+        logging.warning('Community detection not supported for directed graphs.')
     else:
         partitionRGB = getNodePartion(G)
         summary = pd.concat([summary, partitionRGB], axis=1)
@@ -421,8 +430,9 @@ def getNodeSummary(G, refNodes, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis
     scale=10
     assert (size > 0) and (scale > 1)
     propertiesBy = 'refDistance' if refNodes else 'Betweeness'
-    summary['colour'] = setColour(summary, propertiesBy, cmap=cm.viridis_r)
-    reverse = False if propertiesBy == 'Degree' else True
+
+    summary['colour'] = setColour(summary, propertiesBy, cmap=cmap)
+    reverse = True if propertiesBy == 'refDistance' else False
     summary['size'] = MinMaxScaler(
         summary[propertiesBy].fillna(0), (size, size * scale), reverse)
     summary['alpha'] = MinMaxScaler(
@@ -515,7 +525,8 @@ def processLinks(links, stat='OR', minVal=1, alpha=0.01, minObs=1):
         & (links[stat] > minVal)
         & (links['minObs'] >= minObs)
     ]
-    allEdges = sigLinks.apply(lambda x: (x['Node1'], x['Node2'], x['inverseOR']), axis=1).tolist()
+    allEdges = sigLinks.apply(
+        lambda x: (x['Node1'], x['Node2'], x[f'inverse{stat}']), axis=1).tolist()
     return allNodes, allEdges
 
 
