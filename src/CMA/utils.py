@@ -74,6 +74,7 @@ class Config():
             'refNode': [],
             'seed': 42,
             'permutations': 10000,
+            'minObs': 100,
             'alpha': 0.01,
             'minDegree': 0,
             'radius': 2
@@ -90,7 +91,7 @@ class Config():
             config['refNode'] = [config['refNode']]
         # Convert to string
         config['refNode'] = [str(node) for node in config['refNode']]
-        for par in ['minDegree', 'radius', 'seed', 'permutations']:
+        for par in ['minDegree', 'radius', 'seed', 'permutations', 'minObs']:
             if not isinstance(config[par], int):
                 logging.error(
                     f'Non-integer argument passed to config: {par} '

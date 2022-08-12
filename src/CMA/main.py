@@ -42,7 +42,7 @@ def morbidityZ(config: str, morbidities: list):
     morbidities = set(tuple(morbidities))
     df['pair'] = df['codes'].apply(lambda x: morbidities.issubset(x))
 
-    fig, axes = plt.subplots(*plotgrid, sharey=True)
+    fig, axes = plt.subplots(*plotgrid, figsize=(16,9))
     axes = [axes] if len(strata) == 1 else axes.flatten()
 
     for i, stratum in enumerate(strata):
@@ -52,7 +52,8 @@ def morbidityZ(config: str, morbidities: list):
             stratifyBy = [x for x in strata if x != stratum]
         agg = permutationTest(
             df, stratifyBy, stratum, ref='pair', nReps=config['permutations'])
-
+        # Exclude groups with too few positive samples
+        agg.loc[agg['statistic'] < config['minObs'], 'z'] = np.nan
         axes[i].axhline(0, color='black', ls='--')
         axes[i].axhline(2.576, color='grey', ls='--')
         axes[i].axhline(-2.576, color='grey', ls='--')
