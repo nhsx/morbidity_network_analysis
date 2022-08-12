@@ -16,13 +16,19 @@ def main(config: str):
 def edgeAnalysisOnly(config: str, out: str = sys.stdout):
     """ Run Stage 1 of Network Analysis Pipeline """
     allLinks, config = edgeAnalysis(config)
-    allLinks.to_csv(out)
+    allLinks.to_csv(out, index=False)
 
 
 def networkAnalysisOnly(config: str, edgeData: str):
     """ Run Stage 2 of Network Analysis Pipeline """
     config = Config(config).config
-    allLinks = pd.read_csv(edgeData)
+    dtype = ({
+        'Node1': str, 'Node2': str, 'count': str,
+        'minObs': int, 'OR': float, 'RR': float,
+        'pEqual': float, 'pNull': float, 'FDR': float,
+        'inverseOR': float, 'inverseRR': float
+    })
+    allLinks = pd.read_csv(edgeData, dtype=dtype)
     networkAnalysis(config, allLinks)
 
 
