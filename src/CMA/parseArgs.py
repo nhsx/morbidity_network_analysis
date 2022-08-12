@@ -7,7 +7,7 @@ import CMA
 import logging
 import argparse
 from timeit import default_timer as timer
-from .main import main, edgeAnalysisOnly, networkAnalysisOnly
+from .main import main, edgeAnalysisOnly, networkAnalysisOnly, morbidityZ
 from .simulate import simulateData
 from ._version import __version__
 
@@ -80,6 +80,20 @@ def parseArgs() -> argparse.Namespace:
         '--seed', type=int, default=42,
         help='Seed for random number generator (default: %(default)s)')
     sp4.set_defaults(function=simulateData)
+
+
+    sp5 = subparser.add_parser(
+        'strata',
+        description=CMA.simulate.__doc__,
+        help='Estimate morbidity enrichment by strata.',
+        parents=[baseParser],
+        epilog=parser.epilog)
+    sp5.add_argument(
+        'config', help='YAML configuration file.')
+    sp5.add_argument(
+        'morbidities', nargs='+',
+        help='Morbidity set to test for enrichment.')
+    sp5.set_defaults(function=morbidityZ)
 
     args = parser.parse_args()
     if 'function' not in args:

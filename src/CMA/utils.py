@@ -72,6 +72,8 @@ class Config():
             'seperator': None,
             'chunksize': None,
             'refNode': [],
+            'seed': 42,
+            'permutations': 10000,
             'alpha': 0.01,
             'minDegree': 0,
             'radius': 2
@@ -88,7 +90,7 @@ class Config():
             config['refNode'] = [config['refNode']]
         # Convert to string
         config['refNode'] = [str(node) for node in config['refNode']]
-        for par in ['minDegree', 'radius']:
+        for par in ['minDegree', 'radius', 'seed', 'permutations']:
             if not isinstance(config[par], int):
                 logging.error(
                     f'Non-integer argument passed to config: {par} '
@@ -159,7 +161,7 @@ def getFullIndex(df: pd.DataFrame) -> pd.Series:
     return df.reset_index()[['index', 'strata']].apply(tuple, axis=1)
 
 
-def prepareData(df: pd.DataFrame, config: dict) -> pd.DataFrame:
+def prepareData(df: pd.DataFrame, config: dict, keepStrata: bool = False) -> pd.DataFrame:
     """Process ICD-10 multi-morbidity data.
 
     Args:
@@ -170,18 +172,21 @@ def prepareData(df: pd.DataFrame, config: dict) -> pd.DataFrame:
         Processed DataFrame of strata and ICD-10 codes.
     """
     args = (config['codeCols'], config['timeCols'])
-    df = df.astype({col: object for col in config['codeCols']})
+    df = df.astype({col: str for col in config['codeCols']})
     df[['codes', 'time']] = df.apply(extractCodeTimes, args=args, axis=1)
     if config['strata']:
         df['strata'] = df[config['strata']].apply(tuple, axis=1)
     else:
         df['strata'] = True
-    df = df.loc[:, ['strata', 'codes', 'time']]
+    cols = ['strata', 'codes', 'time']
+    if keepStrata:
+        cols += config['strata']
+    df = df.loc[:, cols]
 
     return df
 
 
-def loadData(config: dict) -> pd.DataFrame:
+def loadData(config: dict, keepStrata: bool = False) -> pd.DataFrame:
     """ Main function for loading data """
     #config = loadConfig(config)
     data = pd.read_csv(
@@ -196,7 +201,7 @@ def loadData(config: dict) -> pd.DataFrame:
             validateCols(chunk, config)
         # Check for duplicate names
         checkDuplicates(chunk, config)
-        allData.append(prepareData(chunk, config))
+        allData.append(prepareData(chunk, config, keepStrata))
     allData = pd.concat(allData)
     allData.attrs['directed'] = config['directed']
     return allData
@@ -523,3 +528,41 @@ def MinMaxScaler(x, feature_range=(0, 1), reverse=False):
         X_std = (x - min(x)) / (max(x) - min(x))
     X_scaled = X_std * (maxV - minV) + minV
     return X_scaled
+
+
+def makeChunks(nReps, chunkSize):
+    if nReps <= chunkSize:
+        return [nReps]
+    chunks = [chunkSize for i in range((nReps // chunkSize))]
+    remain = nReps % chunkSize
+    if remain > 0:
+        chunks.append(remain)
+    return chunks
+
+
+def stratifiedPermute(df, stratifyBy, ref, n):
+    """ Stratified permutation of ref values """
+    originalIndex = df.index
+    df = df.set_index(stratifyBy)[[ref]]
+    return (
+        pd.DataFrame(np.tile(df.values, n), index=df.index)
+        .groupby(df.index)
+        .transform(np.random.permutation)
+        .set_index(originalIndex)
+    )
+
+
+def permutationTest(df, stratifyBy, group, ref, nReps, chunkSize=10000):
+    null = []
+    allData = []
+    for chunk in makeChunks(nReps, chunkSize):
+        p = stratifiedPermute(df, stratifyBy, ref, chunk)
+        p[group] = df[group]
+        null.append(p.groupby(group).sum())
+    null = pd.concat(null, axis=1)
+
+    agg = null.agg(['mean', 'std'], axis=1)
+    agg[['statistic', 'count']] = df.groupby(group)[ref].agg(['sum', 'size'])
+    agg['z'] = ((agg['statistic'] - agg['mean']) / agg['std'])
+
+    return agg
