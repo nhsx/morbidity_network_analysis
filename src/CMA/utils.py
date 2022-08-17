@@ -2,6 +2,7 @@
 
 """ Helper functions for command line interface """
 
+import re
 import sys
 import yaml
 import pprint
@@ -578,3 +579,23 @@ def permutationTest(df, stratifyBy, group, ref, nReps, chunkSize=10000):
     agg['z'] = ((agg['statistic'] - agg['mean']) / agg['std'])
 
     return agg
+
+
+def reorderGroups(groups: list):
+    """ Order strings numerically where possible.
+    e.g. string representations of numeric intervals.
+    """
+    numeric = []
+    str_group = [str(group) for group in groups]
+    for group in str_group:
+        # Remove non-numeric characters
+        group = re.split(r'\D+', group)
+        # Remove empty strings
+        group = list(filter(None, group))
+        if not group:
+            # Return unchanged if no numeric
+            return groups
+        numeric.append(float(group[0]))
+    # Sort by numeric
+    groups = [groups[i] for i in np.argsort(numeric)]
+    return groups

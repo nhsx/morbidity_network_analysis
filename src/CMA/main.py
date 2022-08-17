@@ -44,10 +44,9 @@ def morbidityZ(config: str, morbidities: list):
         plotgrid = (1,)
     else:
         plotgrid = (round(len(strata) / 2), 2)
-
+        
     morbidities = set(tuple(morbidities))
     df['pair'] = df['codes'].apply(lambda x: morbidities.issubset(x))
-
     fig, axes = plt.subplots(*plotgrid, figsize=(16,9))
     axes = [axes] if len(strata) == 1 else axes.flatten()
 
@@ -63,7 +62,10 @@ def morbidityZ(config: str, morbidities: list):
         axes[i].axhline(0, color='black', ls='--')
         axes[i].axhline(2.576, color='grey', ls='--')
         axes[i].axhline(-2.576, color='grey', ls='--')
-        sns.barplot(x=stratum, y='z', data=agg.reset_index(), ax=axes[i])
+        sns.barplot(
+            x=stratum, y='z', data=agg.reset_index(),
+            order=reorderGroups(list(agg.index)), ax=axes[i]
+        )
         if i % 2 == 0:
             axes[i].set_ylabel('Z (std from exp. mean)')
         else:
