@@ -38,9 +38,10 @@ def simulateData(
             simulatedMM = sampleNodes(nodes, nMorbidities, overlap, weight)
             # Select time as the node value (enforce directionality)
             simTime = simulatedMM.copy() + 1
-            # Shuffle time order sometimes to add some noise
-            # if np.random.random() < 0.25:
-            #    np.random.shuffle(simTime)
+            # Force to string representation
+            simTime = [str(i) for i in simTime]
+            simulatedMM = [str(i) for i in simulatedMM]
+            # Add NULL
             simulatedMM = np.concatenate([simulatedMM, nEmpty * ['NULL']])
             simTime = np.concatenate([simTime, nEmpty * ['NULL']])
             # Write output
