@@ -6,72 +6,70 @@
 import sys
 import argparse
 import numpy as np
+import pandas as pd
 
 
-def simulateData(
-        nodes: int, seed: int, nRecords: int, weight: int, overlap: int):
+def simulateData(nNodes: int, nRecords: int, seed: int):
     np.random.seed(seed)
-
-    # Define CSV header
-    strataHead = ['sex', 'age']
-    primaryHead = ['Primary_Diagnosis_Code']
-    codeHeaders = (
-        ['Primary_Diagnosis_Code']
-        + [f'Secondary_Diagnosis_Code_{i:02d}' for i in range(1, 25 + 1)]
-    )
-    timeHeaders = (
-        ['Primary_Diagnosis_Time']
-        + [f'Secondary_Diagnosis_Time_{i:02d}' for i in range(1, 25 + 1)]
-    )
-    header = strataHead + codeHeaders + timeHeaders
-
-    print(*header, sep=',')
-    for i in range(nRecords):
-        sex = np.random.choice(['male', 'female'])
-        age = np.random.choice([25, 55])
-        # Select number of morbidities
-        nMorbidities = min(26, max(0, np.random.geometric(1/5.95)))
-        nEmpty = 26 - nMorbidities
-        if nMorbidities == 0:
-            simulated = [sex, age] + ((nEmpty * 2) * ['NULL'])
+    maxMorbidity = 26
+    nodes = np.array(range(1, nNodes + 1))
+    allWeights = getNodeWeights(nodes)
+    df = initialiseData(nodes, nRecords, maxMorbidity)
+    for n in range(1, maxMorbidity):
+        if n % 2 == 0:
+            nodeSet = np.random.choice(nodes, nRecords)
         else:
-            simulatedMM = sampleNodes(nodes, nMorbidities, overlap, weight)
-            # Select time as the node value (enforce directionality)
-            simTime = simulatedMM.copy() + 1
-            # Force to string representation
-            simTime = [str(i) for i in simTime]
-            simulatedMM = [str(i) for i in simulatedMM]
-            # Add NULL
-            simulatedMM = np.concatenate([simulatedMM, nEmpty * ['NULL']])
-            simTime = np.concatenate([simTime, nEmpty * ['NULL']])
-            # Write output
-            simulated = np.concatenate([[sex, age], simulatedMM, simTime])
-        print(*simulated, sep=',')
+            nodeSet = df.apply(getNextNode, args=(nodes, allWeights), axis=1)
+        df[f'secondaryCode{n}'] = nodeSet
+        df[f'secondaryTime{n}'] = df[f'secondaryCode{n}']
+    df.drop('nMorbidities', axis=1).to_csv(sys.stdout, index=False)
 
 
-def sampleNodes(nodes: int, size: int, overlap: int, weight: float):
-    baseP = np.ones(nodes)
-    # Intialise selection
-    select = np.random.choice(range(nodes))
-    allMM = [select]
-    for i in range(size - 1):
-        previousNode = allMM[i]
-        # Lonely nodes - no dependence for high value nodes
-        if previousNode > 50:
-            select = np.random.choice(
-                range(nodes), p=(np.ones(nodes)) / nodes)
+def initialiseData(nodes: np.array, nRecords: int, maxMorbidity: int = 26):
+    nMorbidities = np.random.geometric(1/12, nRecords)
+    nMorbidities[nMorbidities > maxMorbidity] = maxMorbidity
+    df = ({
+        'Age': np.random.choice([5, 10, 20, 40, 80], nRecords),
+        'nMorbidities': len(nodes),
+        'primaryCode': np.random.choice(nodes, nRecords)
+    })
+    df = pd.DataFrame(df)
+    df['primaryTime'] = df['primaryCode']
+    return df
+
+
+def getNodeWeights(nodes: np.array) -> dict:
+    """ Get probability weight for each node """
+    nNodes = len(nodes)
+    riskRatio = nNodes
+    allWeights = {}
+    baseRisk = np.ones(nNodes)
+    for node in nodes:
+        if node == 1:
+            allWeights[node] = baseRisk / baseRisk.sum()
         else:
-            a = ((previousNode // 10) * 10) - overlap
-            b = (a + 10) + overlap
-            # Prevent index error
-            a = max(0, a)
-            b = min(50, min(len(baseP) - 1, b))
-            p = baseP.copy()
-            if previousNode % 2 == 0:
-                p[a:b:2] = weight
-            else:
-                p[a+1:b:2] = weight
-            p /= p.sum()
-            select = np.random.choice(list(range(nodes)), p=p)
-        allMM.append(select)
-    return np.array(allMM)
+            risk = baseRisk.copy()
+            factors = getFactors(node, excludeSelf=True)
+            risk[np.argwhere(np.isin(nodes, factors))] = riskRatio
+            allWeights[node] = risk / risk.sum()
+    return allWeights
+
+
+def getFactors(n: int, excludeSelf: bool = False):
+    """ Compute all factors for n. """
+    factors = set() if excludeSelf else set(n)
+    for i in range(1, (n // 2) + 1):
+        if n % i == 0:
+            factors.add(i)
+    return list(factors)
+
+
+def getNextNode(x, nodes, allWeights):
+    allPrevious = [col for col in x.index if 'Code' in col]
+    previous = allPrevious[-1]
+    if len(allPrevious) >= x['nMorbidities']:
+        return 'NULL'
+    probs = allWeights[x[previous]].copy()
+    probs[0] = (x['Age'] / 40) * probs[0]
+    probs /= probs.sum()
+    return np.random.choice(nodes, p=probs)

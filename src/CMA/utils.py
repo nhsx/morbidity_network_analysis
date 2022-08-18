@@ -68,18 +68,22 @@ class Config():
     def default(self):
         """ Default values of configuration file. """
         return ({
-            'file': self.mandatory,
+            'input': self.mandatory,
+            'edgeData': self.mandatory,
+            'networkPlot': self.mandatory,
             'codes': self.mandatory,
             'strata': None,
             'seperator': None,
-            'chunksize': None,
+            'chunkSize': None,
             'refNode': [],
             'seed': 42,
+            'stat': 'OR',
             'permutations': 10000,
             'minObs': 100,
             'alpha': 0.01,
             'minDegree': 0,
-            'radius': 2
+            'radius': 1,
+            'plotDPI': 300
         })
 
     def _postProcessConfig(self):
@@ -91,9 +95,14 @@ class Config():
         # Ensure single value is in list
         if not isinstance(config['refNode'], list):
             config['refNode'] = [config['refNode']]
+        assert config['stat'] in ['OR', 'RR']
         # Convert to string
         config['refNode'] = [str(node) for node in config['refNode']]
-        for par in ['minDegree', 'radius', 'seed', 'permutations', 'minObs']:
+        intVars = ([
+            'minDegree', 'radius', 'seed',
+            'permutations', 'minObs', 'plotDPI'
+        ])
+        for par in intVars:
             if not isinstance(config[par], int):
                 logging.error(
                     f'Non-integer argument passed to config: {par} '
@@ -109,18 +118,18 @@ class Config():
             config['timeCols'] = list(config['codes'].values())
             config['allCols'] += config['timeCols']
         config['allCols'] += config['codeCols']
-        if config['chunksize'] is not None:
-            if (not isinstance(config['chunksize'], int)
-                    or config['chunksize'] <= 0):
+        if config['chunkSize'] is not None:
+            if (not isinstance(config['chunkSize'], int)
+                    or config['chunkSize'] <= 0):
                 logging.error(
-                    f'Invalid chunksize {config["chunksize"]}\n')
+                    f'Invalid chunksize {config["chunkSize"]}\n')
                 self.error = True
 
 def validateCols(df, config):
     """ Check for missing columns in df """
     missingCols = set(config['allCols']) - set(df.columns)
     if missingCols:
-        logging.error(f'{missingCols} not present in {config["file"]}\n')
+        logging.error(f'{missingCols} not present in {config["input"]}\n')
         raise ValueError
     if config['directed']:
         timeTypes = df[config['timeCols']].select_dtypes(
@@ -128,7 +137,7 @@ def validateCols(df, config):
         invalidType = set(config['timeCols']) - set(timeTypes.columns)
         if invalidType:
             logging.error(
-                f'Invalid time type at columns {invalidType} in {config["file"]}\n')
+                f'Invalid time type at columns {invalidType} in {config["input"]}\n')
             raise ValueError
 
 
@@ -193,8 +202,8 @@ def loadData(config: dict, keepStrata: bool = False) -> pd.DataFrame:
     # Enfore codes as strings
     dtypes = {col: str for col in config['codeCols']}
     data = pd.read_csv(
-        config['file'], sep=config['seperator'],
-        chunksize=config['chunksize'],
+        config['input'], sep=config['seperator'],
+        chunksize=config['chunkSize'],
         dtype=dtypes, iterator=True
     )
     allData = []
@@ -329,7 +338,7 @@ def runEdgeAnalysis(df_sp, codePairs, directed):
             excludeAll = ((a1 == -1) & (a2 != 0)) | ((a2 == -1) & (a1 != 0))
         else:
             excludeAll = None
-        k, minObs, tables = stratifiedOdds(a1, a2, indices, directed, excludeAll)
+        k, minObs = stratifiedOdds(a1, a2, indices, directed, excludeAll)
         if k is None:
             continue
         allLinks.append([
@@ -364,17 +373,19 @@ def edgeAnalysis(config: str):
 
 def networkAnalysis(config: str, allLinks):
     allNodes, allEdges = processLinks(
-        allLinks, stat='RR', minVal=1, alpha=config['alpha'], minObs=50)
-
+        allLinks, stat=config['stat'], minVal=1, alpha=config['alpha'], minObs=50)
+    stat = config['stat'] # Odds ratio or Risk Ratio
     G = nx.DiGraph() if config['directed'] else nx.Graph()
     G.add_nodes_from(allNodes)
     G.add_weighted_edges_from(allEdges)
     validRefs = validateRefNode(config['refNode'], G)
     G = makeEgo(G, validRefs, config['directed'], radius=config['radius'])
+    if len(G.nodes()) == 1:
+        logging.error(f'Reference node(s) {validRefs} have no connections.')
+        return 1
     cmap = cm.viridis_r if config['refNode'] else cm.viridis
     nodeSummary = getNodeSummary(
         G, validRefs, alphaMin=0.5, size=50, scale=10, cmap=cmap)
-
     for node in G.nodes():
         G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
         G.nodes[node]['label'] = str(node)
@@ -384,9 +395,9 @@ def networkAnalysis(config: str, allLinks):
         G.nodes[node]['color'] = rgb2hex((*rgb, alpha), keep_alpha=True)
 
     allEdges = {edge: 1 / G.edges[edge]['weight'] for edge in G.edges()}
-    allEdges = pd.Series(allEdges).to_frame().rename({0: 'OR'}, axis=1)
-    allEdges['logOR'] = np.log(allEdges['OR'])
-    allEdges['scaled'] = MinMaxScaler(allEdges['logOR'], (0.1, 1))
+    allEdges = pd.Series(allEdges).to_frame().rename({0: stat}, axis=1)
+    allEdges[f'log{stat}'] = np.log(allEdges[stat])
+    allEdges['scaled'] = MinMaxScaler(allEdges[f'log{stat}'], (0.1, 1))
     # Truncate to 1 in case of rounding error
     allEdges['scaled'] = allEdges['scaled'].apply(lambda x: x if x < 1 else 1)
     allEdges = allEdges['scaled'].to_dict()
@@ -403,15 +414,17 @@ def networkAnalysis(config: str, allLinks):
     net.from_nx(G)
     net.toggle_physics(True)
     net.barnes_hut()
-    net.show('exampleNet.html')
+    net.show(config['networkPlot'])
 
 
 def makeEgo(G, refNodes, directed, radius):
     """ Subset graph based on distance to reference nodes """
-    if not refNodes: return G
+    if not refNodes:
+        return G
     newG = nx.DiGraph() if directed else nx.Graph()
     for ref in refNodes:
-        newG.update(nx.ego_graph(G, n=ref, radius=radius, undirected=True))
+        ego = nx.ego_graph(G, n=ref, radius=radius, undirected=(not directed))
+        newG.update(ego)
     return newG.copy()
 
 
@@ -431,13 +444,18 @@ def getNodeSummary(G, refNodes, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis
     scale=10
     assert (size > 0) and (scale > 1)
     propertiesBy = 'refDistance' if refNodes else 'Betweeness'
-
     summary['colour'] = setColour(summary, propertiesBy, cmap=cmap)
     reverse = True if propertiesBy == 'refDistance' else False
-    summary['size'] = MinMaxScaler(
-        summary[propertiesBy].fillna(0), (size, size * scale), reverse)
-    summary['alpha'] = MinMaxScaler(
-        summary[propertiesBy].fillna(0), (alphaMin, 1), reverse)
+    # Reference ndes are the same size as the largest non-reference
+    naFill = summary[propertiesBy].min()
+    if (summary[propertiesBy].dropna() == naFill).all():
+        summary['size'] = size
+        summary['alpha'] = 1
+    else:
+        summary['size'] = MinMaxScaler(
+            summary[propertiesBy].fillna(naFill), (size, size * scale), reverse)
+        summary['alpha'] = MinMaxScaler(
+            summary[propertiesBy].fillna(0), (alphaMin, 1), reverse)
     return summary
 
 
@@ -491,7 +509,7 @@ def validateRefNode(refNodes, G):
         if ref not in G.nodes():
             logging.error(f'{ref} not in network.')
         else:
-            validRefs.append(ref)
+            validRefs.append(str(ref))
     return validRefs
 
 

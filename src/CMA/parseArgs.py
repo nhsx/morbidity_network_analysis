@@ -42,8 +42,6 @@ def parseArgs() -> argparse.Namespace:
         epilog=parser.epilog)
     sp2.add_argument(
         'config', help='YAML configuration file.')
-    sp2.add_argument(
-        'out', help='Path to write edge data, pickle format.')
     sp2.set_defaults(function=edgeAnalysisOnly)
 
     sp3 = subparser.add_parser(
@@ -54,8 +52,6 @@ def parseArgs() -> argparse.Namespace:
         epilog=parser.epilog)
     sp3.add_argument(
         'config', help='YAML configuration file.')
-    sp3.add_argument(
-        'edgeData', help='Output .csv file of "CMA process".')
     sp3.set_defaults(function=networkAnalysisOnly)
 
     sp4 = subparser.add_parser(
@@ -65,17 +61,11 @@ def parseArgs() -> argparse.Namespace:
         parents=[baseParser],
         epilog=parser.epilog)
     sp4.add_argument(
-        '--nodes', type=int, default=60,
+        '--nNodes', type=int, default=32,
         help='Total nodes in simulated network (default: %(default)s)')
     sp4.add_argument(
-        '--nRecords', type=int, default=20_000,
+        '--nRecords', type=int, default=100_000,
         help='Number of patient records to simulate (default: %(default)s)')
-    sp4.add_argument(
-        '--weight', type=float, default=100,
-        help='Sampling weight for associated groups (default: %(default)s)')
-    sp4.add_argument(
-        '--overlap', type=int, default=1,
-        help='Co-occurence overlap (default: %(default)s)')
     sp4.add_argument(
         '--seed', type=int, default=42,
         help='Seed for random number generator (default: %(default)s)')
@@ -91,8 +81,11 @@ def parseArgs() -> argparse.Namespace:
     sp5.add_argument(
         'config', help='YAML configuration file.')
     sp5.add_argument(
+        'out', help='Path to write figure.')
+    sp5.add_argument(
         'morbidities', nargs='+',
         help='Morbidity set to test for enrichment.')
+
     sp5.set_defaults(function=morbidityZ)
 
     args = parser.parse_args()

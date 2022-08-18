@@ -13,13 +13,13 @@ def main(config: str):
     networkAnalysis(config, allLinks)
 
 
-def edgeAnalysisOnly(config: str, out: str = sys.stdout):
+def edgeAnalysisOnly(config: str):
     """ Run Stage 1 of Network Analysis Pipeline """
     allLinks, config = edgeAnalysis(config)
-    allLinks.to_csv(out, index=False)
+    allLinks.to_csv(config['edgeData'], index=False)
 
 
-def networkAnalysisOnly(config: str, edgeData: str):
+def networkAnalysisOnly(config: str):
     """ Run Stage 2 of Network Analysis Pipeline """
     config = Config(config).config
     dtype = ({
@@ -28,11 +28,11 @@ def networkAnalysisOnly(config: str, edgeData: str):
         'pEqual': float, 'pNull': float, 'FDR': float,
         'inverseOR': float, 'inverseRR': float
     })
-    allLinks = pd.read_csv(edgeData, dtype=dtype)
+    allLinks = pd.read_csv(config['edgeData'], dtype=dtype)
     networkAnalysis(config, allLinks)
 
 
-def morbidityZ(config: str, morbidities: list):
+def morbidityZ(config: str, out: str, morbidities: list):
     config = Config(config).config
     np.random.seed(config['seed'])
 
@@ -44,7 +44,7 @@ def morbidityZ(config: str, morbidities: list):
         plotgrid = (1,)
     else:
         plotgrid = (round(len(strata) / 2), 2)
-        
+
     morbidities = set(tuple(morbidities))
     df['pair'] = df['codes'].apply(lambda x: morbidities.issubset(x))
     fig, axes = plt.subplots(*plotgrid, figsize=(16,9))
@@ -56,7 +56,8 @@ def morbidityZ(config: str, morbidities: list):
         else:
             stratifyBy = [x for x in strata if x != stratum]
         agg = permutationTest(
-            df, stratifyBy, stratum, ref='pair', nReps=config['permutations'])
+            df, stratifyBy, stratum, ref='pair',
+            nReps=config['permutations'], chunkSize=2000)
         # Exclude groups with too few positive samples
         agg.loc[agg['statistic'] < config['minObs'], 'z'] = np.nan
         axes[i].axhline(0, color='black', ls='--')
@@ -78,4 +79,4 @@ def morbidityZ(config: str, morbidities: list):
 
     fig.suptitle(f'{morbidities}')
     fig.tight_layout()
-    fig.savefig('test.pdf')
+    fig.savefig(out, dpi=config['plotDPI'])
