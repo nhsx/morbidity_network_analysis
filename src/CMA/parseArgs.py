@@ -61,11 +61,14 @@ def parseArgs() -> argparse.Namespace:
         parents=[baseParser],
         epilog=parser.epilog)
     sp4.add_argument(
-        '--nNodes', type=int, default=32,
+        '--nNodes', type=int, default=100,
         help='Total nodes in simulated network (default: %(default)s)')
     sp4.add_argument(
-        '--nRecords', type=int, default=100_000,
+        '--nRecords', type=int, default=500_000,
         help='Number of patient records to simulate (default: %(default)s)')
+    sp4.add_argument(
+        '--weight', type=float, default=0.5,
+        help='Probability of sampling a factor (default: %(default)s)')
     sp4.add_argument(
         '--seed', type=int, default=42,
         help='Seed for random number generator (default: %(default)s)')

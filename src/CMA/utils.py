@@ -12,11 +12,11 @@ import pandas as pd
 import networkx as nx
 import matplotlib.cm as cm
 from pyvis.network import Network
-from itertools import combinations
 from scipy.sparse import csr_matrix
 import community as community_louvain
 from matplotlib.colors import rgb2hex
 from matplotlib.colors import Normalize
+from itertools import combinations, permutations
 from statsmodels.stats.multitest import fdrcorrection
 from statsmodels.stats.contingency_tables import StratifiedTable
 
@@ -72,18 +72,21 @@ class Config():
             'edgeData': self.mandatory,
             'networkPlot': self.mandatory,
             'codes': self.mandatory,
+            'refNode': [],
+            'excludeNode': [],
+            'radius': 1,
             'strata': None,
             'seperator': None,
             'chunkSize': None,
-            'refNode': [],
             'seed': 42,
             'stat': 'OR',
             'permutations': 10000,
             'minObs': 100,
             'alpha': 0.01,
             'minDegree': 0,
-            'radius': 1,
-            'plotDPI': 300
+            'plotDPI': 300,
+            'maxNodeSize': 50,
+            'nodeScale': 10
         })
 
     def _postProcessConfig(self):
@@ -93,14 +96,20 @@ class Config():
         if config['strata'] is not None:
             config['allCols'] += config['strata']
         # Ensure single value is in list
-        if not isinstance(config['refNode'], list):
-            config['refNode'] = [config['refNode']]
+        for group in ['refNode', 'excludeNode']:
+            if not isinstance(config[group], list):
+                config[group] = [config[group]]
+                # Convert to string
+            config[group] = [str(node) for node in config[group]]
+        refAndExclude = set(config['refNode']).intersection(config['excludeNode'])
+        if refAndExclude:
+            logging.error(
+                f'Nodes {refAndExclude} are in reference and exclusion list')
+            raise ValueError
         assert config['stat'] in ['OR', 'RR']
-        # Convert to string
-        config['refNode'] = [str(node) for node in config['refNode']]
         intVars = ([
-            'minDegree', 'radius', 'seed',
-            'permutations', 'minObs', 'plotDPI'
+            'minDegree', 'radius', 'seed', 'permutations',
+            'minObs', 'plotDPI', 'maxNodeSize', 'nodeScale'
         ])
         for par in intVars:
             if not isinstance(config[par], int):
@@ -108,6 +117,8 @@ class Config():
                     f'Non-integer argument passed to config: {par} '
                     f'({config[par]}) setting to {self.default[par]}.')
                 config[par] = self.default[par]
+        assert config['maxNodeSize'] > 0
+        assert config['nodeScale'] > 1
         if isinstance(config['codes'], list):
             config['directed'] = False
             config['codeCols'] = config['codes']
@@ -201,11 +212,16 @@ def loadData(config: dict, keepStrata: bool = False) -> pd.DataFrame:
     """ Main function for loading data """
     # Enfore codes as strings
     dtypes = {col: str for col in config['codeCols']}
-    data = pd.read_csv(
-        config['input'], sep=config['seperator'],
-        chunksize=config['chunkSize'],
-        dtype=dtypes, iterator=True
-    )
+    if config['seperator'] is None:
+        data = pd.read_csv(
+            config['input'], chunksize=config['chunkSize'],
+            dtype=dtypes, iterator=True
+        )
+    else:
+        data = pd.read_csv(
+            config['input'], sep=config['seperator'],
+            chunksize=config['chunkSize'], dtype=dtypes, iterator=True
+        )
     allData = []
     rowsWithDups = []
     for i, chunk in enumerate(data):
@@ -221,7 +237,7 @@ def loadData(config: dict, keepStrata: bool = False) -> pd.DataFrame:
 
 
 
-def getMMFrequency(df: pd.DataFrame) -> pd.Series:
+def getMMFrequency(df: pd.DataFrame, directed: bool) -> pd.Series:
     """Process ICD-10 multi-morbidity data.
 
     Args:
@@ -230,11 +246,14 @@ def getMMFrequency(df: pd.DataFrame) -> pd.Series:
     Returns:
          Mulimorbidity frequency of pairwise ICD-10 codes.
     """
-    return (
-        df['codes'].apply(
-            lambda x: [tuple(sorted(x)) for x in combinations(x, 2)])
-        .explode().dropna().value_counts().sort_values(ascending=False)
+    if directed:
+        func = lambda x: [tuple(x) for x in permutations(x, 2)]
+    else:
+        func = lambda x: [tuple(sorted(x)) for x in combinations(x, 2)]
+    codePairs = (
+        df['codes'].apply(func).explode().drop_duplicates().tolist()
     )
+    return codePairs
 
 def getICDlong(df: pd.DataFrame) -> pd.DataFrame:
     """Generate long-format ICD data, 1 code per row.
@@ -259,6 +278,7 @@ def getICDlong(df: pd.DataFrame) -> pd.DataFrame:
         df_long['time'] = df_long['time'].astype(bool)
     return df_long
 
+
 def df2Sparse(df: pd.DataFrame, fullIndex: pd.Series) -> pd.DataFrame:
     indexGrp = df.groupby(['ID', 'strata']).grouper
     indexIdx = indexGrp.group_info[0]
@@ -280,6 +300,7 @@ def df2Sparse(df: pd.DataFrame, fullIndex: pd.Series) -> pd.DataFrame:
     # Set index as ID
     df_sparse.index = df_sparse.index.map(lambda x: x[0]).values
     return df_sparse
+
 
 def makeStratifiedTable(
     a1: np.array,
@@ -313,6 +334,7 @@ def retrieveIndices(df: pd.DataFrame) -> list:
 
 
 def stratifiedOdds(a1, a2, indices, directed, excludeAll=None):
+    # We could return total count of positive cases here
     if directed:
         # Direction specific exclusion
         bothNonZero = (a1 != 0) & (a2 != 0)
@@ -330,7 +352,7 @@ def stratifiedOdds(a1, a2, indices, directed, excludeAll=None):
 def runEdgeAnalysis(df_sp, codePairs, directed):
     indices = retrieveIndices(df_sp)
     allLinks = []
-    for i, ((m1, m2), count) in enumerate(codePairs.iteritems()):
+    for m1, m2 in codePairs:
         a1 = np.array(df_sp[m1])
         a2 = np.array(df_sp[m2])
         if directed:
@@ -342,13 +364,17 @@ def runEdgeAnalysis(df_sp, codePairs, directed):
         if k is None:
             continue
         allLinks.append([
-            m1, m2, count, minObs, k.oddsratio_pooled,
+            m1, m2, minObs, k.oddsratio_pooled,
             k.riskratio_pooled, k.test_equal_odds().pvalue,
             k.test_null_odds().pvalue
         ])
+        if (m1 == '11') and (m2 == '22'):
+            print(allLinks[-1])
+        if (m1 == '22') and (m2 == '11'):
+            print(allLinks[-1])
     allLinks = pd.DataFrame(allLinks)
     allLinks.columns = (
-        ['Node1', 'Node2', 'count', 'minObs', 'OR', 'RR', 'pEqual', 'pNull'])
+        ['Node1', 'Node2', 'minObs', 'OR', 'RR', 'pEqual', 'pNull'])
     allLinks.loc[allLinks['pNull'].notna(), 'FDR'] = (
         fdrcorrection(allLinks.loc[allLinks['pNull'].notna(), 'pNull'])[1]
     )
@@ -364,7 +390,7 @@ def edgeAnalysis(config: str):
     df = loadData(config)
     # Retrieve full index (including records with no morbidities)
     fullIndex = getFullIndex(df)
-    codePairs = getMMFrequency(df)
+    codePairs = getMMFrequency(df, config['directed'])
     df_long = getICDlong(df)
     df_sp = df2Sparse(df_long, fullIndex)
     allLinks = runEdgeAnalysis(df_sp, codePairs, config['directed'])
@@ -372,20 +398,31 @@ def edgeAnalysis(config: str):
 
 
 def networkAnalysis(config: str, allLinks):
+    allLinks = allLinks.loc[
+          (~allLinks['Node1'].isin(config['excludeNode']))
+        & (~allLinks['Node2'].isin(config['excludeNode']))
+    ].copy()
     allNodes, allEdges = processLinks(
-        allLinks, stat=config['stat'], minVal=1, alpha=config['alpha'], minObs=50)
+        allLinks, stat=config['stat'], minVal=1,
+        alpha=config['alpha'], minObs=config['minObs']
+    )
     stat = config['stat'] # Odds ratio or Risk Ratio
+
     G = nx.DiGraph() if config['directed'] else nx.Graph()
     G.add_nodes_from(allNodes)
     G.add_weighted_edges_from(allEdges)
-    validRefs = validateRefNode(config['refNode'], G)
+
+    validRefs = validateNodes(config['refNode'], G)
     G = makeEgo(G, validRefs, config['directed'], radius=config['radius'])
+
     if len(G.nodes()) == 1:
         logging.error(f'Reference node(s) {validRefs} have no connections.')
         return 1
     cmap = cm.viridis_r if config['refNode'] else cm.viridis
     nodeSummary = getNodeSummary(
-        G, validRefs, alphaMin=0.5, size=50, scale=10, cmap=cmap)
+        G, validRefs, alphaMin=0.5, size=config['maxNodeSize'],
+        scale=config['nodeScale'], cmap=cmap
+    )
     for node in G.nodes():
         G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
         G.nodes[node]['label'] = str(node)
@@ -394,18 +431,14 @@ def networkAnalysis(config: str, allLinks):
         alpha = nodeSummary.loc[node, 'alpha']
         G.nodes[node]['color'] = rgb2hex((*rgb, alpha), keep_alpha=True)
 
-    allEdges = {edge: 1 / G.edges[edge]['weight'] for edge in G.edges()}
-    allEdges = pd.Series(allEdges).to_frame().rename({0: stat}, axis=1)
-    allEdges[f'log{stat}'] = np.log(allEdges[stat])
-    allEdges['scaled'] = MinMaxScaler(allEdges[f'log{stat}'], (0.1, 1))
-    # Truncate to 1 in case of rounding error
-    allEdges['scaled'] = allEdges['scaled'].apply(lambda x: x if x < 1 else 1)
-    allEdges = allEdges['scaled'].to_dict()
+    maxEdgeWidth = config['maxNodeSize'] / 50
+    edgeSummary = getEdgeSummary(
+        G, alphaMin=0.5, size=maxEdgeWidth, scale=config['nodeScale'])
 
     for edge in G.edges():
-        # Invert weight to get larger width for larger odds ratio
-        G.edges[edge]['width'] = np.log(1 / G.edges[edge]['weight'])
-        G.edges[edge]['color'] = rgb2hex((0, 0, 0, allEdges[edge]), keep_alpha=True)
+        G.edges[edge]['width'] = edgeSummary.loc[edge, 'width']
+        alpha = edgeSummary.loc[edge, 'alpha']
+        G.edges[edge]['color'] = rgb2hex((0, 0, 0, alpha), keep_alpha=True)
 
     remove = [x for x in G.nodes() if G.degree(x) < config['minDegree']]
     G.remove_nodes_from(remove)
@@ -429,6 +462,7 @@ def makeEgo(G, refNodes, directed, radius):
 
 
 def getNodeSummary(G, refNodes, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r):
+    assert (size > 0) and (scale > 1)
     centrality = pd.Series(nx.betweenness_centrality(G,  weight='weight'), name='Betweeness')
     degree = pd.DataFrame(G.degree()).set_index(0)[1].rename('Degree')
     summary = pd.concat([centrality, degree], axis=1)
@@ -440,9 +474,6 @@ def getNodeSummary(G, refNodes, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis
     if refNodes:
         refRGB = getRefDistance(G, refNodes)
         summary = pd.concat([summary, refRGB], axis=1)
-    size=50
-    scale=10
-    assert (size > 0) and (scale > 1)
     propertiesBy = 'refDistance' if refNodes else 'Betweeness'
     summary['colour'] = setColour(summary, propertiesBy, cmap=cmap)
     reverse = True if propertiesBy == 'refDistance' else False
@@ -456,6 +487,16 @@ def getNodeSummary(G, refNodes, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis
             summary[propertiesBy].fillna(naFill), (size, size * scale), reverse)
         summary['alpha'] = MinMaxScaler(
             summary[propertiesBy].fillna(0), (alphaMin, 1), reverse)
+    return summary
+
+
+def getEdgeSummary(G, alphaMin=0.5, size=1, scale=10):
+    summary = pd.DataFrame(
+        {edge: G.edges[edge]['weight'] for edge in G.edges()}, index=['weight']).T
+    summary['logWeight'] = np.log(summary['weight'])
+    summary['alpha'] = MinMaxScaler(summary['logWeight'], (alphaMin, 1), reverse=True)
+    summary['width'] = MinMaxScaler(
+        summary['logWeight'], (size, size * scale), reverse=True)
     return summary
 
 
@@ -502,15 +543,15 @@ def getNodePartion(G, colours=None):
     return partitionInfo
 
 
-def validateRefNode(refNodes, G):
-    """ Check to see if all reference nodes are in network """
-    validRefs = []
-    for ref in refNodes:
-        if ref not in G.nodes():
-            logging.error(f'{ref} not in network.')
+def validateNodes(nodes, G):
+    """ Check to see if all nodes are in network """
+    validNodes = []
+    for node in nodes:
+        if node not in G.nodes():
+            logging.error(f'{node} not in network.')
         else:
-            validRefs.append(str(ref))
-    return validRefs
+            validNodes.append(node)
+    return validNodes
 
 
 def getRefDistance(G, refNodes):

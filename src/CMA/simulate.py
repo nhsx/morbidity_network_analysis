@@ -9,49 +9,51 @@ import numpy as np
 import pandas as pd
 
 
-def simulateData(nNodes: int, nRecords: int, seed: int):
+def simulateData(nNodes: int, nRecords: int, weight: float, seed: int):
+    assert 0 <= weight <= 1
     np.random.seed(seed)
-    maxMorbidity = 26
+    codesPerRecord = 6
     nodes = np.array(range(1, nNodes + 1))
-    allWeights = getNodeWeights(nodes)
-    df = initialiseData(nodes, nRecords, maxMorbidity)
-    for n in range(1, maxMorbidity):
-        if n % 2 == 0:
-            nodeSet = np.random.choice(nodes, nRecords)
-        else:
-            nodeSet = df.apply(getNextNode, args=(nodes, allWeights), axis=1)
-        df[f'secondaryCode{n}'] = nodeSet
-        df[f'secondaryTime{n}'] = df[f'secondaryCode{n}']
-    df.drop('nMorbidities', axis=1).to_csv(sys.stdout, index=False)
+    allWeights = getNodeWeights(nodes, weight)
+    df = initialiseData(nodes, nRecords)
+    for n in range(2, codesPerRecord + 1):
+        nodeSet = df.apply(getNextNode, args=(n, nodes, allWeights), axis=1)
+        df[f'code{n}'] = nodeSet
+        df[f'time{n}'] = nNodes - df[f'code{n}']
+    df.to_csv(sys.stdout, index=False)
 
 
-def initialiseData(nodes: np.array, nRecords: int, maxMorbidity: int = 26):
-    nMorbidities = np.random.geometric(1/12, nRecords)
-    nMorbidities[nMorbidities > maxMorbidity] = maxMorbidity
-    df = ({
-        'Age': np.random.choice([5, 10, 20, 40, 80], nRecords),
-        'nMorbidities': len(nodes),
-        'primaryCode': np.random.choice(nodes, nRecords)
+def initialiseData(nodes: np.array, nRecords: int):
+    df = pd.DataFrame({
+        'Age': np.random.choice([10, 20, 40, 80], nRecords),
+        'code1': np.random.choice(nodes, nRecords)
     })
-    df = pd.DataFrame(df)
-    df['primaryTime'] = df['primaryCode']
+    df['time1'] = df['code1']
     return df
 
 
-def getNodeWeights(nodes: np.array) -> dict:
+def getNodeWeights(nodes: np.array, weight: int) -> dict:
     """ Get probability weight for each node """
     nNodes = len(nodes)
-    riskRatio = nNodes
     allWeights = {}
-    baseRisk = np.ones(nNodes)
+    baseWeight = np.ones(nNodes)
     for node in nodes:
         if node == 1:
-            allWeights[node] = baseRisk / baseRisk.sum()
+            allWeights[node] = baseWeight / baseWeight.sum()
         else:
-            risk = baseRisk.copy()
+            factorWeight = baseWeight.copy()
             factors = getFactors(node, excludeSelf=True)
-            risk[np.argwhere(np.isin(nodes, factors))] = riskRatio
-            allWeights[node] = risk / risk.sum()
+            # Special case - zero probability of picking a factor
+            if weight == 0:
+                factorWeight[np.argwhere(np.isin(nodes, factors))] = 0
+            # Special case - ALWAYS pick a factor
+            elif weight == 1:
+                factorWeight[np.argwhere(~np.isin(nodes, factors))] = 0
+            else:
+                allFactorWeight = weight * ((nNodes - len(factors)) / (1 - weight))
+                perFactorWeight = allFactorWeight / len(factors)
+                factorWeight[np.argwhere(np.isin(nodes, factors))] = perFactorWeight
+            allWeights[node] = factorWeight / factorWeight.sum()
     return allWeights
 
 
@@ -64,12 +66,12 @@ def getFactors(n: int, excludeSelf: bool = False):
     return list(factors)
 
 
-def getNextNode(x, nodes, allWeights):
-    allPrevious = [col for col in x.index if 'Code' in col]
-    previous = allPrevious[-1]
-    if len(allPrevious) >= x['nMorbidities']:
-        return 'NULL'
-    probs = allWeights[x[previous]].copy()
-    probs[0] = (x['Age'] / 40) * probs[0]
-    probs /= probs.sum()
-    return np.random.choice(nodes, p=probs)
+def getNextNode(x, codeNumber, nodes, allWeights):
+    previous = f'code{codeNumber-1}'
+    if codeNumber % 2 != 0:
+        return np.random.choice(nodes)
+    else:
+        probs = allWeights[x[previous]].copy()
+        probs[0] = (x['Age'] / 40) * probs[0]
+        probs /= probs.sum()
+        return np.random.choice(nodes, p=probs)

@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 def main(config: str):
     """ Run Full Network Analysis Pipeline """
     allLinks, config = edgeAnalysis(config)
+    allLinks.to_csv(config['edgeData'], index=False)
     networkAnalysis(config, allLinks)
 
 
