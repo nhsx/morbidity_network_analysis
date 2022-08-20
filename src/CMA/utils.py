@@ -5,6 +5,7 @@
 import re
 import sys
 import yaml
+import json
 import pprint
 import logging
 import numpy as np
@@ -16,8 +17,9 @@ from scipy.sparse import csr_matrix
 import community as community_louvain
 from matplotlib.colors import rgb2hex
 from matplotlib.colors import Normalize
-from itertools import combinations, permutations
+from itertools import combinations
 from statsmodels.stats.multitest import fdrcorrection
+from statsmodels.stats.proportion import proportions_ztest
 from statsmodels.stats.contingency_tables import StratifiedTable
 
 
@@ -237,7 +239,7 @@ def loadData(config: dict, keepStrata: bool = False) -> pd.DataFrame:
 
 
 
-def getMMFrequency(df: pd.DataFrame, directed: bool) -> pd.Series:
+def getMMFrequency(df: pd.DataFrame) -> pd.Series:
     """Process ICD-10 multi-morbidity data.
 
     Args:
@@ -246,10 +248,7 @@ def getMMFrequency(df: pd.DataFrame, directed: bool) -> pd.Series:
     Returns:
          Mulimorbidity frequency of pairwise ICD-10 codes.
     """
-    if directed:
-        func = lambda x: [tuple(x) for x in permutations(x, 2)]
-    else:
-        func = lambda x: [tuple(sorted(x)) for x in combinations(x, 2)]
+    func = lambda x: [tuple(sorted(x)) for x in combinations(x, 2)]
     codePairs = (
         df['codes'].apply(func).explode().drop_duplicates().tolist()
     )
@@ -306,18 +305,14 @@ def makeStratifiedTable(
     a1: np.array,
     a2: np.array,
     strataIndices: np.array,
-    exclude: np.array = None
 ) -> np.array:
     """ Generate set of stratified contigency tables """
     ctTables = []
-    if exclude is None:
-        exclude = np.zeros(len(a1)).astype(bool)
-    a1 = a1[~exclude].copy()
-    a2 = a2[~exclude].copy()
+    a1 = a1.copy()
+    a2 = a2.copy()
     for s in strataIndices:
         ct = np.bincount(
-            2 * a1[s[~exclude]].astype(bool)
-            + a2[s[~exclude]].astype(bool),
+            2 * a1[s].astype(bool) + a2[s].astype(bool),
             minlength=4).reshape(2,2)
         if (ct == 0).any():
             continue
@@ -333,15 +328,9 @@ def retrieveIndices(df: pd.DataFrame) -> list:
     return indices
 
 
-def stratifiedOdds(a1, a2, indices, directed, excludeAll=None):
-    # We could return total count of positive cases here
-    if directed:
-        # Direction specific exclusion
-        bothNonZero = (a1 != 0) & (a2 != 0)
-        exclude = ((a1 >= a2) & bothNonZero) | excludeAll
-    else:
-        exclude = None
-    tables = makeStratifiedTable(a1, a2, indices, exclude)
+def stratifiedOdds(a1, a2, indices):
+    # Get counts of ne before other - do prop test
+    tables = makeStratifiedTable(a1, a2, indices)
     if not tables:
         return (None, None)
     minObs = np.sum(tables, axis=2).min()
@@ -349,34 +338,41 @@ def stratifiedOdds(a1, a2, indices, directed, excludeAll=None):
     return k, minObs
 
 
-def runEdgeAnalysis(df_sp, codePairs, directed):
+def proportionTest(a1, a2):
+    bothTimeInfo = (a1 > 0) & (a2 > 0)
+    a1_to_a2 = (a1[bothTimeInfo] < a2[bothTimeInfo]).sum()
+    a2_to_a1 = (a2[bothTimeInfo] < a1[bothTimeInfo]).sum()
+    z, p = proportions_ztest(
+        a1_to_a2, a1_to_a2 + a2_to_a1, value=0.5, alternative='two-sided')
+    # Total positive cases (ignoring time information)
+    total = ((a1 != 0) & (a2 != 0)).sum()
+    return z, p, total
+
+
+def runEdgeAnalysis(df_sp, codePairs):
     indices = retrieveIndices(df_sp)
     allLinks = []
     for m1, m2 in codePairs:
         a1 = np.array(df_sp[m1])
         a2 = np.array(df_sp[m2])
-        if directed:
-            # Exclude amiguous / missing time stamps
-            excludeAll = ((a1 == -1) & (a2 != 0)) | ((a2 == -1) & (a1 != 0))
-        else:
-            excludeAll = None
-        k, minObs = stratifiedOdds(a1, a2, indices, directed, excludeAll)
+        z, p, total = proportionTest(a1, a2)
+        k, minObs = stratifiedOdds(a1, a2, indices)
         if k is None:
             continue
         allLinks.append([
-            m1, m2, minObs, k.oddsratio_pooled,
-            k.riskratio_pooled, k.test_equal_odds().pvalue,
-            k.test_null_odds().pvalue
+            m1, m2, minObs, k.oddsratio_pooled, k.riskratio_pooled,
+            k.test_null_odds().pvalue, z, p, total
         ])
-        if (m1 == '11') and (m2 == '22'):
-            print(allLinks[-1])
-        if (m1 == '22') and (m2 == '11'):
-            print(allLinks[-1])
     allLinks = pd.DataFrame(allLinks)
-    allLinks.columns = (
-        ['Node1', 'Node2', 'minObs', 'OR', 'RR', 'pEqual', 'pNull'])
-    allLinks.loc[allLinks['pNull'].notna(), 'FDR'] = (
+    allLinks.columns = ([
+        'Node1', 'Node2', 'minObs', 'OR', 'RR',
+        'pNull', 'zProp', 'pProp', 'totalPositive'
+    ])
+    allLinks.loc[allLinks['pNull'].notna(), 'FDRnull'] = (
         fdrcorrection(allLinks.loc[allLinks['pNull'].notna(), 'pNull'])[1]
+    )
+    allLinks.loc[allLinks['pProp'].notna(), 'FDRprop'] = (
+        fdrcorrection(allLinks.loc[allLinks['pProp'].notna(), 'pProp'])[1]
     )
     # Larger odds ratio = smaller edge
     allLinks['inverseOR'] = 1 / allLinks['OR']
@@ -390,10 +386,10 @@ def edgeAnalysis(config: str):
     df = loadData(config)
     # Retrieve full index (including records with no morbidities)
     fullIndex = getFullIndex(df)
-    codePairs = getMMFrequency(df, config['directed'])
+    codePairs = getMMFrequency(df)
     df_long = getICDlong(df)
     df_sp = df2Sparse(df_long, fullIndex)
-    allLinks = runEdgeAnalysis(df_sp, codePairs, config['directed'])
+    allLinks = runEdgeAnalysis(df_sp, codePairs)
     return allLinks, config
 
 
@@ -403,7 +399,8 @@ def networkAnalysis(config: str, allLinks):
         & (~allLinks['Node2'].isin(config['excludeNode']))
     ].copy()
     allNodes, allEdges = processLinks(
-        allLinks, stat=config['stat'], minVal=1,
+        allLinks, directed=config['directed'],
+        stat=config['stat'], minVal=1,
         alpha=config['alpha'], minObs=config['minObs']
     )
     stat = config['stat'] # Odds ratio or Risk Ratio
@@ -431,7 +428,7 @@ def networkAnalysis(config: str, allLinks):
         alpha = nodeSummary.loc[node, 'alpha']
         G.nodes[node]['color'] = rgb2hex((*rgb, alpha), keep_alpha=True)
 
-    maxEdgeWidth = config['maxNodeSize'] / 50
+    maxEdgeWidth = config['maxNodeSize'] / 20
     edgeSummary = getEdgeSummary(
         G, alphaMin=0.5, size=maxEdgeWidth, scale=config['nodeScale'])
 
@@ -445,8 +442,22 @@ def networkAnalysis(config: str, allLinks):
 
     net = Network(height='85%', width='75%', directed=G.is_directed())
     net.from_nx(G)
-    net.toggle_physics(True)
-    net.barnes_hut()
+    options = json.dumps({
+        'edges': {'arrowStrikethrough': False},
+        'physics': {
+            'enabled': True,
+            'barnesHut': {
+                'gravitationalConstant': -80000,
+                'springLength': 250,
+                'springConstant': 0.001,
+                'centralGravity': 0.3,
+                'springStrength': 0.001,
+                'damping': 0.09,
+                'overlap': 0
+            }
+        }
+    })
+    net.set_options(f"var options = {options}")
     net.show(config['networkPlot'])
 
 
@@ -573,20 +584,29 @@ def getRefDistance(G, refNodes):
     return pd.Series(refRGB).to_frame().rename({0: 'refDistance'}, axis=1)
 
 
+def retrieveEdge(x, directed, stat):
+    """ Return edge and correctly oriented if directed graph """
+    if directed and x['zProp'] < 0:
+        return (x['Node2'], x['Node1'], x[f'inverse{stat}'])
+    else:
+        return (x['Node1'], x['Node2'], x[f'inverse{stat}'])
 
-def processLinks(links, stat='OR', minVal=1, alpha=0.01, minObs=1):
+
+def processLinks(links, directed, stat='OR', minVal=1, alpha=0.01, minObs=1):
     assert stat in links.columns
     # Force string type for pyvis
     links[['Node1', 'Node2']] = links[['Node1', 'Node2']].astype(str)
     allNodes = links[['Node1', 'Node2']].melt()['value'].drop_duplicates().tolist()
     links['ICDpair'] = [tuple(r) for r in links[['Node1', 'Node2']].to_numpy()]
     sigLinks = links.loc[
-        (links['FDR'] < alpha)
+          (links['FDRnull'] < alpha)
         & (links[stat] > minVal)
         & (links['minObs'] >= minObs)
     ]
+    if directed:
+        sigLinks = sigLinks.loc[sigLinks['FDRprop'] < alpha]
     allEdges = sigLinks.apply(
-        lambda x: (x['Node1'], x['Node2'], x[f'inverse{stat}']), axis=1).tolist()
+        retrieveEdge, args=(directed, stat), axis=1).tolist()
     return allNodes, allEdges
 
 
