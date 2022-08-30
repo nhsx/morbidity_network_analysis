@@ -9,17 +9,19 @@ import numpy as np
 import pandas as pd
 
 
-def simulateData(nNodes: int, nRecords: int, weight: float, seed: int):
+def simulateData(
+        nNodes: int, nRecords: int, codesPerRecord: int,
+        weight: float, seed: int):
     assert 0 <= weight <= 1
+    assert codesPerRecord >= 2
     np.random.seed(seed)
-    codesPerRecord = 6
     nodes = np.array(range(1, nNodes + 1))
     allWeights = getNodeWeights(nodes, weight)
     df = initialiseData(nodes, nRecords)
     for n in range(2, codesPerRecord + 1):
         nodeSet = df.apply(getNextNode, args=(n, nodes, allWeights), axis=1)
         df[f'code{n}'] = nodeSet
-        df[f'time{n}'] = nNodes - df[f'code{n}']
+        df[f'time{n}'] = (nNodes + 1) - df[f'code{n}']
     df.to_csv(sys.stdout, index=False)
 
 
@@ -28,7 +30,7 @@ def initialiseData(nodes: np.array, nRecords: int):
         'Age': np.random.choice([10, 20, 40, 80], nRecords),
         'code1': np.random.choice(nodes, nRecords)
     })
-    df['time1'] = df['code1']
+    df['time1'] = (len(nodes) + 1) - df[f'code1']
     return df
 
 

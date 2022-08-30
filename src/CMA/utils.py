@@ -250,7 +250,7 @@ def getMMFrequency(df: pd.DataFrame) -> pd.Series:
     """
     func = lambda x: [tuple(sorted(x)) for x in combinations(x, 2)]
     codePairs = (
-        df['codes'].apply(func).explode().drop_duplicates().tolist()
+        df['codes'].apply(func).explode().drop_duplicates().dropna().tolist()
     )
     return codePairs
 
@@ -329,7 +329,6 @@ def retrieveIndices(df: pd.DataFrame) -> list:
 
 
 def stratifiedOdds(a1, a2, indices):
-    # Get counts of ne before other - do prop test
     tables = makeStratifiedTable(a1, a2, indices)
     if not tables:
         return (None, None)
@@ -368,6 +367,7 @@ def runEdgeAnalysis(df_sp, codePairs):
         'Node1', 'Node2', 'minObs', 'OR', 'RR',
         'pNull', 'zProp', 'pProp', 'totalPositive'
     ])
+    # FDR correct all valid tests
     allLinks.loc[allLinks['pNull'].notna(), 'FDRnull'] = (
         fdrcorrection(allLinks.loc[allLinks['pNull'].notna(), 'pNull'])[1]
     )
@@ -410,6 +410,7 @@ def networkAnalysis(config: str, allLinks):
     G.add_weighted_edges_from(allEdges)
 
     validRefs = validateNodes(config['refNode'], G)
+
     G = makeEgo(G, validRefs, config['directed'], radius=config['radius'])
 
     if len(G.nodes()) == 1:
@@ -604,7 +605,9 @@ def processLinks(links, directed, stat='OR', minVal=1, alpha=0.01, minObs=1):
         & (links['minObs'] >= minObs)
     ]
     if directed:
-        sigLinks = sigLinks.loc[sigLinks['FDRprop'] < alpha]
+        sigLinks = sigLinks.loc[
+              (sigLinks['FDRprop'] < alpha)
+        ]
     allEdges = sigLinks.apply(
         retrieveEdge, args=(directed, stat), axis=1).tolist()
     return allNodes, allEdges
