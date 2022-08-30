@@ -468,7 +468,7 @@ def makeEgo(G, refNodes, directed, radius):
         return G
     newG = nx.DiGraph() if directed else nx.Graph()
     for ref in refNodes:
-        ego = nx.ego_graph(G, n=ref, radius=radius, undirected=(not directed))
+        ego = nx.ego_graph(G, n=ref, radius=radius, undirected=True)
         newG.update(ego)
     return newG.copy()
 
@@ -486,6 +486,7 @@ def getNodeSummary(G, refNodes, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis
     if refNodes:
         refRGB = getRefDistance(G, refNodes)
         summary = pd.concat([summary, refRGB], axis=1)
+    print(summary)
     propertiesBy = 'refDistance' if refNodes else 'Betweeness'
     summary['colour'] = setColour(summary, propertiesBy, cmap=cmap)
     reverse = True if propertiesBy == 'refDistance' else False
@@ -568,6 +569,7 @@ def validateNodes(nodes, G):
 
 def getRefDistance(G, refNodes):
     refRGB = {}
+    G = G.to_undirected() # Ignore direction for path length
     for node in sorted(G.nodes()):
         if node in refNodes:
             refRGB[node] = np.nan
