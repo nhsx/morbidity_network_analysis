@@ -486,7 +486,6 @@ def getNodeSummary(G, refNodes, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis
     if refNodes:
         refRGB = getRefDistance(G, refNodes)
         summary = pd.concat([summary, refRGB], axis=1)
-    print(summary)
     propertiesBy = 'refDistance' if refNodes else 'Betweeness'
     summary['colour'] = setColour(summary, propertiesBy, cmap=cmap)
     reverse = True if propertiesBy == 'refDistance' else False
