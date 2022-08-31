@@ -61,10 +61,10 @@ def parseArgs() -> argparse.Namespace:
         parents=[baseParser],
         epilog=parser.epilog)
     sp4.add_argument(
-        '--nNodes', type=int, default=36,
+        '--nNodes', type=int, default=24,
         help='Total nodes in simulated network (default: %(default)s)')
     sp4.add_argument(
-        '--nRecords', type=int, default=100_000,
+        '--nRecords', type=int, default=200_000,
         help='Number of records to simulate (default: %(default)s)')
     sp4.add_argument(
         '--codesPerRecord', type=int, default=4,
