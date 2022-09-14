@@ -15,6 +15,7 @@ Option to build directed networks when diagnosis times are available.
   * [Configuration](#configuration)
   * [Usage](#usage)
   * [Example output](#example-output)
+  * [Contact](#contact)
 
 ## Installation
 
@@ -97,6 +98,3 @@ Finally node relationships are temporal to mimic diagnosis time - in the simulat
 ![Example Network Output](./README_files/exampleNet.png)
 
 ## Contact
-
-**[Stephen Richer](https://www.linkedin.com/in/stephenricher/)**
-, :envelope: stephen.richer@proton.me
