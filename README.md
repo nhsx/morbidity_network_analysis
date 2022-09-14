@@ -95,3 +95,8 @@ MorbiNet can successfully recover these relationships in the network analysis.
 Finally node relationships are temporal to mimic diagnosis time - in the simulated data larger numbers always occur before smaller.
 
 ![Example Network Output](./README_files/exampleNet.png)
+
+## Contact
+
+**[Stephen Richer](https://www.linkedin.com/in/stephenricher/)**
+, :envelope: stephen.richer@proton.me
