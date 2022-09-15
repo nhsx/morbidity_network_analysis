@@ -2,6 +2,8 @@
 
 ## Build and visualise multi-morbidity networks to discover significant disease associations.
 
+[![status: experimental](https://github.com/GIScience/badges/raw/master/status/experimental.svg)](https://github.com/GIScience/badges#experimental)
+
 This command line tool provides user-friendly and automated multi-morbidity network analysis.
 Detect significant associations are correcting for confounding factors such as Age and Sex.
 Includes community detection for und-irected networks.
@@ -15,6 +17,8 @@ Option to build directed networks when diagnosis times are available.
   * [Configuration](#configuration)
   * [Usage](#usage)
   * [Example output](#example-output)
+  * [Contributing](#contributing)
+  * [License](#license)
   * [Contact](#contact)
 
 ## Installation
@@ -97,4 +101,21 @@ Finally node relationships are temporal to mimic diagnosis time - in the simulat
 
 ![Example Network Output](./README_files/exampleNet.png)
 
-## Contact
+### Contributing
+
+Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+### License
+
+Distributed under the MIT License. _See [LICENSE](./LICENSE) for more information._
+
+### Contact
+
+If you have any other questions please contact the author **[Stephen Richer](https://www.linkedin.com/in/stephenricher/)**
+at stephen.richer@proton.me
