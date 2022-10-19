@@ -48,8 +48,6 @@ codes:
     code2: time2
     code3: time3
     code4: time4
-    code5: time5
-    code6: time6
 seed: 42
 ```
 
@@ -59,9 +57,10 @@ MultiNet can be run from the command line and additional help is provided via ``
 
 ### Generate Example Data
 The ```simulate``` sub-command generates suitably formatted input data for testing functionality.
+It also writes an example config file in YAML format.
 
 ```bash
-CMA simulate > CMA-example.csv
+CMA simulate --config config.yaml > CMA-example.csv
 ```
 
 ### Stage 1 - Processing input and generate edge weights.

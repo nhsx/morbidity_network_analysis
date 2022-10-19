@@ -4,14 +4,15 @@
 
 
 import sys
+import yaml
 import argparse
 import numpy as np
 import pandas as pd
 
 
 def simulateData(
-        nNodes: int, nRecords: int, codesPerRecord: int,
-        weight: float, seed: int):
+        config: str, nNodes: int, nRecords: int,
+        codesPerRecord: int, weight: float, seed: int):
     assert 0 <= weight <= 1
     assert codesPerRecord >= 2
     np.random.seed(seed)
@@ -23,6 +24,29 @@ def simulateData(
         df[f'code{n}'] = nodeSet
         df[f'time{n}'] = (nNodes + 1) - df[f'code{n}']
     df.to_csv(sys.stdout, index=False)
+    writeConfig(config)
+
+
+def writeConfig(config: str = None):
+    config_settings = ({
+        'input': 'CMA-example.csv',
+        'edgeData': 'CMA-example-processed.csv.gz',
+        'networkPlot': 'exampleNetwork-ref.html',
+        'strata': ['Age'],
+        'excludeNode': [1],
+        'radius': 1,
+        'codes': {
+            'code1': 'time1',
+            'code2': 'time2',
+            'code3': 'time3',
+            'code4': 'time4'},
+        'seed': 42
+    })
+    if config is None:
+        yaml.dump(config_settings, sys.stderr)
+    else:
+        with open(config, 'w') as fh:
+            yaml.dump(config_settings, fh)
 
 
 def initialiseData(nodes: np.array, nRecords: int):

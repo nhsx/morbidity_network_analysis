@@ -61,6 +61,9 @@ def parseArgs() -> argparse.Namespace:
         parents=[baseParser],
         epilog=parser.epilog)
     sp4.add_argument(
+        '--config',
+        help='Path to write default config file (default: stderr)')
+    sp4.add_argument(
         '--nNodes', type=int, default=24,
         help='Total nodes in simulated network (default: %(default)s)')
     sp4.add_argument(
@@ -76,7 +79,6 @@ def parseArgs() -> argparse.Namespace:
         '--seed', type=int, default=42,
         help='Seed for random number generator (default: %(default)s)')
     sp4.set_defaults(function=simulateData)
-
 
     sp5 = subparser.add_parser(
         'strata',
