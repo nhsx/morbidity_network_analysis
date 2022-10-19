@@ -243,7 +243,7 @@ def getMMFrequency(df: pd.DataFrame) -> pd.Series:
     """Process ICD-10 multi-morbidity data.
 
     Args:
-        df (pd.DataFrame): ICD-10 data processed by CMA.processData().
+        df (pd.DataFrame): ICD-10 data processed by cma.processData().
 
     Returns:
          Mulimorbidity frequency of pairwise ICD-10 codes.
@@ -258,7 +258,7 @@ def getICDlong(df: pd.DataFrame) -> pd.DataFrame:
     """Generate long-format ICD data, 1 code per row.
 
     Args:
-        df (pd.DataFrame): ICD-10 data processed by CMA.processData().
+        df (pd.DataFrame): ICD-10 data processed by cma.processData().
 
     Returns:
          Long format ICD-10 codes.

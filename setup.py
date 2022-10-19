@@ -28,12 +28,12 @@ def get_info():
 
 
 setup(
-    name='CMA',
+    name='cma',
     author='Stephen Richer',
     author_email='stephen.richer@nhs.net',
     url='https://github.com/nhsx/morbidity_network_analysis',
     entry_points={
-        'console_scripts': ['CMA=CMA.parseArgs:parseArgs']
+        'console_scripts': ['cma=cma.parseArgs:parseArgs']
     },
     python_requires='>=3.8.0',
     install_requires=[
@@ -44,6 +44,7 @@ setup(
         'matplotlib',
         'pyvis',
         'scipy',
+        'seaborn',
         'python-louvain',
         'statsmodels'
     ],

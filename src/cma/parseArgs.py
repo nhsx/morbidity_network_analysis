@@ -3,7 +3,7 @@
 """ Multimordibity Network Analysis """
 
 import sys
-import CMA
+import cma
 import logging
 import argparse
 from timeit import default_timer as timer
@@ -56,7 +56,7 @@ def parseArgs() -> argparse.Namespace:
 
     sp4 = subparser.add_parser(
         'simulate',
-        description=CMA.simulate.__doc__,
+        description=cma.simulate.__doc__,
         help='Simulate test data.',
         parents=[baseParser],
         epilog=parser.epilog)
@@ -82,7 +82,7 @@ def parseArgs() -> argparse.Namespace:
 
     sp5 = subparser.add_parser(
         'strata',
-        description=CMA.simulate.__doc__,
+        description=cma.simulate.__doc__,
         help='Estimate morbidity enrichment by strata.',
         parents=[baseParser],
         epilog=parser.epilog)
