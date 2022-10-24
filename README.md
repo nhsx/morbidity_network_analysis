@@ -35,6 +35,15 @@ docker build -t cma .
 docker run cma --help
 ```
 
+To run the following example via Docker we recommended using docker volumes to access local data from the docker container.
+The following command mounts the current directory to the directory `/cma/` within the container.
+Following this we update the container working directory (`-w /cma/`) and run the commands as normal.
+
+```bash
+docker run -v $(pwd):/cma/ -w /cma/ \
+  cma process config.yaml
+```
+
 ## Configuration
 MultiNet is configured via a single configuration file in YAML format.
 The configuration describes the file-path of the input data and column names of the desired strata and diseases.
