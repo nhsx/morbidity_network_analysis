@@ -14,6 +14,10 @@ Option to build directed networks when diagnosis times are available.
 ## Table of contents
 
   * [Installation](#installation)
+    * [Virtual Environment](#virtual-environment)
+      * [Unix/macOS](#unixmacos)
+      * [Windows](#windows)
+    * [Docker](#docker)
   * [Configuration](#configuration)
   * [Usage](#usage)
   * [Example output](#example-output)
@@ -21,10 +25,40 @@ Option to build directed networks when diagnosis times are available.
   * [License](#license)
   * [Contact](#contact)
 
+
 ## Installation
+Installation is possible via `pip` as shown below.
+To manage dependencies and avoid conflicts it is recommended to install within a [virtual environment](#virtual-environment) or a [Docker container](#docker) as described.
 
 ```bash
 pip install git+https://github.com/nhsx/morbidity_network_analysis.git
+```
+
+
+### Virtual Environment
+
+#### Unix/macOS
+Run the following commands via Terminal.
+
+```bash
+python -m venv cma
+source cma/bin/activate
+pip install git+https://github.com/nhsx/morbidity_network_analysis.git
+```
+
+#### Windows
+Run the following commands via PowerShell.
+
+```PowerShell
+py -m venv cma
+cma/Scripts/Activate.ps1
+pip install git+https://github.com/nhsx/morbidity_network_analysis.git
+```
+
+If running scripts is disabled on your system then run the following command before activating your environment.
+
+```PowerShell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
 
 ### Docker
@@ -36,13 +70,16 @@ docker run cma --help
 ```
 
 To run the following example via Docker we recommended using docker volumes to access local data from the docker container.
-The following command mounts the current directory to the directory `/cma/` within the container.
-Following this we update the container working directory (`-w /cma/`) and run the commands as normal.
+The following command mounts the current directory to the directory `/out` within the container.
+Following this we update the container working directory (`-w /out`) and run the commands as normal.
 
 ```bash
-docker run -v $(pwd):/cma/ -w /cma/ \
-  cma process config.yaml
+docker run -v $(pwd):/out -w /out \
+  cma simulate --config config.yaml > CMA-example.csv
 ```
+
+Refer to the [Docker documentation](https://docs.docker.com/get-docker/) for Docker installation instructions.
+
 
 ## Configuration
 MultiNet is configured via a single configuration file in YAML format.
