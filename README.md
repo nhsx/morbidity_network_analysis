@@ -65,6 +65,7 @@ Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 ```bash
 git clone --depth 1 https://github.com/nhsx/morbidity_network_analysis.git
+cd morbidity_network_analysis/
 docker build -t cma .
 docker run cma --help
 ```
