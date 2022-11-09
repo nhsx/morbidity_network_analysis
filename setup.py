@@ -55,7 +55,7 @@ setup(
         'Intended Audience :: Science/Research',
         'Intended Audience :: Healthcare Industry',
         'Topic :: Scientific/Engineering',
-        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3',
         'Natural Language :: English',
     ],
     version=get_info()['__version__'],
