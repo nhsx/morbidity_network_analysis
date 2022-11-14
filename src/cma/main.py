@@ -4,19 +4,20 @@ from .utils import *
 import sys
 import pandas as pd
 import seaborn as sns
+import cma.edgeAnalysis as ea
 import matplotlib.pyplot as plt
 
 
 def main(config: str):
     """ Run Full Network Analysis Pipeline """
-    allLinks, config = edgeAnalysis(config)
+    allLinks, config = ea.edgeAnalysis(config)
     allLinks.to_csv(config['edgeData'], index=False)
     networkAnalysis(config, allLinks)
 
 
 def edgeAnalysisOnly(config: str):
     """ Run Stage 1 of Network Analysis Pipeline """
-    allLinks, config = edgeAnalysis(config)
+    allLinks, config = ea.edgeAnalysis(config)
     allLinks.to_csv(config['edgeData'], index=False)
 
 
