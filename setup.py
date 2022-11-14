@@ -37,16 +37,17 @@ setup(
     },
     python_requires='>=3.8.0',
     install_requires=[
-        'pyyaml',
         'numpy',
-        'pandas',
-        'networkx',
-        'matplotlib',
         'pyvis',
         'scipy',
+        'pyyaml',
+        'pandas',
         'seaborn',
-        'python-louvain',
+        'networkx',
+        'wordcloud'
+        'matplotlib',
         'statsmodels'
+        'python-louvain',
     ],
     license='MIT',
     classifiers=[

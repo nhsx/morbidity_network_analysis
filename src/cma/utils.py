@@ -12,12 +12,14 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 import matplotlib.cm as cm
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 from pyvis.network import Network
+from itertools import combinations
 from scipy.sparse import csr_matrix
 import community as community_louvain
 from matplotlib.colors import rgb2hex
 from matplotlib.colors import Normalize
-from itertools import combinations
 from statsmodels.stats.multitest import fdrcorrection
 from statsmodels.stats.proportion import proportions_ztest
 from statsmodels.stats.contingency_tables import StratifiedTable
@@ -87,6 +89,7 @@ class Config():
             'alpha': 0.01,
             'minDegree': 0,
             'plotDPI': 300,
+            'wordcloud': None,
             'maxNodeSize': 50,
             'nodeScale': 10
         })
@@ -158,7 +161,6 @@ def checkDuplicates(df, config):
     """ Check for duplicate codes in row """
     duplicates = df[config['codeCols']].apply(
         lambda x: len(set(x.dropna())) < len(x.dropna()), axis=1)
-
     return duplicates[duplicates].index
 
 
@@ -398,6 +400,7 @@ def networkAnalysis(config: str, allLinks):
           (~allLinks['Node1'].isin(config['excludeNode']))
         & (~allLinks['Node2'].isin(config['excludeNode']))
     ].copy()
+
     allNodes, allEdges = processLinks(
         allLinks, directed=config['directed'],
         stat=config['stat'], minVal=1,
@@ -410,6 +413,10 @@ def networkAnalysis(config: str, allLinks):
     G.add_weighted_edges_from(allEdges)
 
     validRefs = validateNodes(config['refNode'], G)
+
+    # Make a WordCloud
+    if (len(validRefs) > 0) and (config['wordcloud'] is not None):
+        generateWordCloud(G, validRefs, config['wordcloud'])
 
     G = makeEgo(G, validRefs, config['directed'], radius=config['radius'])
 
@@ -459,7 +466,7 @@ def networkAnalysis(config: str, allLinks):
         }
     })
     net.set_options(f"var options = {options}")
-    net.show(config['networkPlot'])
+    net.save_graph(config['networkPlot'])
 
 
 def makeEgo(G, refNodes, directed, radius):
@@ -682,3 +689,29 @@ def reorderGroups(groups: list):
     # Sort by numeric
     groups = [groups[i] for i in np.argsort(numeric)]
     return groups
+
+
+def refDistances(G, validRefs):
+    """ Get mean distance of each node from
+        reference nodes for wordcloud. """
+    refDist = []
+    for ref in validRefs:
+        p = pd.Series(nx.shortest_path_length(G, source=ref, weight='weight'))
+        refDist.append(p)
+    refDist = pd.concat(refDist, axis=1).mean(axis=1)
+    refDist = refDist.loc[~refDist.index.isin(validRefs)]
+    refDist = pd.Series(
+        data=MinMaxScaler(refDist, feature_range=(0.1, 1), reverse=True),
+        index=refDist.index)
+    return refDist.to_dict()
+
+
+def generateWordCloud(G, refs, out):
+    """ Make WordCloud of nodes scaled to
+        proximity to reference nodes """
+    assert len(refs) > 0
+    frequencies = refDistances(G, refs)
+    wc = WordCloud(prefer_horizontal=1, width=1600, height=900)
+    wc.generate_from_frequencies(frequencies)
+    with open(out, 'w') as fh:
+        fh.write(wc.to_svg(embed_font=True))
