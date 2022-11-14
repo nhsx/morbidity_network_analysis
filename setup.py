@@ -46,7 +46,7 @@ setup(
         'networkx',
         'wordcloud',
         'matplotlib',
-        'statsmodels'
+        'statsmodels',
         'python-louvain',
     ],
     license='MIT',
