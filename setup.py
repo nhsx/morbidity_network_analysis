@@ -44,7 +44,7 @@ setup(
         'pandas',
         'seaborn',
         'networkx',
-        'wordcloud'
+        'wordcloud',
         'matplotlib',
         'statsmodels'
         'python-louvain',
