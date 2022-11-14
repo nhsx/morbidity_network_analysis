@@ -79,7 +79,7 @@ class Config():
             'chunkSize': None,
             'seed': 42,
             'stat': 'OR',
-            'permutations': 10000,
+            'permutations': 1000,
             'minObs': 100,
             'alpha': 0.01,
             'minDegree': 0,
