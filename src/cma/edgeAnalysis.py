@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from cma.utils import Config
+from cma.utils import Config, loadData, validateCols, checkDuplicates, prepareData, extractCodeTimes
 import numpy as np
 import pandas as pd
 from itertools import combinations
@@ -20,99 +20,6 @@ def edgeAnalysis(config: str):
     df_sp = df2Sparse(df_long, fullIndex)
     allLinks = runEdgeAnalysis(df_sp, codePairs)
     return allLinks, config
-
-
-def loadData(config: dict, keepStrata: bool = False) -> pd.DataFrame:
-    """ Main function for loading data """
-    # Enfore codes as strings
-    dtypes = {col: str for col in config['codeCols']}
-    if config['seperator'] is None:
-        data = pd.read_csv(
-            config['input'], chunksize=config['chunkSize'],
-            dtype=dtypes, iterator=True
-        )
-    else:
-        data = pd.read_csv(
-            config['input'], sep=config['seperator'],
-            chunksize=config['chunkSize'], dtype=dtypes, iterator=True
-        )
-    allData = []
-    rowsWithDups = []
-    for i, chunk in enumerate(data):
-        if i == 0:
-            # Ensure all column names are in df
-            validateCols(chunk, config)
-        # Check for duplicate names
-        checkDuplicates(chunk, config)
-        allData.append(prepareData(chunk, config, keepStrata))
-    allData = pd.concat(allData).fillna('')
-    allData.attrs['directed'] = config['directed']
-    return allData
-
-
-def validateCols(df, config):
-    """ Check for missing columns in df """
-    missingCols = set(config['allCols']) - set(df.columns)
-    if missingCols:
-        logging.error(f'{missingCols} not present in {config["input"]}\n')
-        raise ValueError
-    if config['directed']:
-        timeTypes = df[config['timeCols']].select_dtypes(
-            include=[np.number, np.datetime64])
-        invalidType = set(config['timeCols']) - set(timeTypes.columns)
-        if invalidType:
-            logging.error(
-                f'Invalid time type at columns {invalidType} in {config["input"]}\n')
-            raise ValueError
-
-
-def checkDuplicates(df, config):
-    """ Check for duplicate codes in row """
-    duplicates = df[config['codeCols']].apply(
-        lambda x: len(set(x.dropna())) < len(x.dropna()), axis=1)
-    return duplicates[duplicates].index
-
-
-def prepareData(df: pd.DataFrame, config: dict, keepStrata: bool = False) -> pd.DataFrame:
-    """Process ICD-10 multi-morbidity data.
-
-    Args:
-        df (pd.DataFrame) : ICD-10 Data.
-        config (str) : Preloaded config file.
-
-    Returns:
-        Processed DataFrame of strata and ICD-10 codes.
-    """
-    args = (config['codeCols'], config['timeCols'])
-    df[['codes', 'time']] = df.apply(extractCodeTimes, args=args, axis=1)
-    if config['strata']:
-        df['strata'] = df[config['strata']].apply(tuple, axis=1)
-    else:
-        df['strata'] = True
-    cols = ['strata', 'codes', 'time']
-    if keepStrata:
-        cols += config['strata']
-    df = df.loc[:, cols]
-
-    return df
-
-
-def extractCodeTimes(x, codeCols, timeCols=None):
-    # Retrive unique codes and their associated time column
-    codeUniq = list(np.unique(x[codeCols].dropna(), return_index=True))
-    if len(codeUniq[0]) == 0:
-        return pd.Series([(), ()])
-    if timeCols is None:
-        timeUniq = tuple([True for i in range(len(codeUniq[0]))])
-    else:
-        timeUniq = [timeCols[i] for i in codeUniq[1]]
-        timeUniq = tuple(x[timeUniq].fillna(-1))
-    # Float node names not allowed by pyvis
-    if isinstance(codeUniq[0][0], float):
-        codes = tuple(int(c) for c in codeUniq[0])
-    else:
-        codes = tuple(codeUniq[0])
-    return pd.Series([codes, timeUniq])
 
 
 def getFullIndex(df: pd.DataFrame) -> pd.Series:

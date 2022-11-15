@@ -73,8 +73,9 @@ class Config():
             'codes': self.mandatory,
             'refNode': [],
             'excludeNode': [],
-            'radius': 1,
+            'maxNode': 10,
             'strata': None,
+            'demographics': None,
             'seperator': None,
             'chunkSize': None,
             'seed': 42,
@@ -86,6 +87,7 @@ class Config():
             'plotDPI': 300,
             'wordcloud': None,
             'fromRef': True,
+            'maxWords': None,
             'maxNodeSize': 50,
             'nodeScale': 10
         })
@@ -109,7 +111,7 @@ class Config():
             raise ValueError
         assert config['stat'] in ['OR', 'RR']
         intVars = ([
-            'minDegree', 'radius', 'seed', 'permutations',
+            'minDegree', 'seed', 'permutations',
             'minObs', 'plotDPI', 'maxNodeSize', 'nodeScale'
         ])
         for par in intVars:
@@ -138,6 +140,100 @@ class Config():
                 self.error = True
 
 
+def loadData(config: dict, keepCols: list = None) -> pd.DataFrame:
+    """ Main function for loading data """
+    # Enfore codes as strings
+    dtypes = {col: str for col in config['codeCols']}
+    if config['seperator'] is None:
+        data = pd.read_csv(
+            config['input'], chunksize=config['chunkSize'],
+            dtype=dtypes, iterator=True
+        )
+    else:
+        data = pd.read_csv(
+            config['input'], sep=config['seperator'],
+            chunksize=config['chunkSize'], dtype=dtypes, iterator=True
+        )
+    allData = []
+    rowsWithDups = []
+    for i, chunk in enumerate(data):
+        if i == 0:
+            # Ensure all column names are in df
+            validateCols(chunk, config)
+        # Check for duplicate names
+        checkDuplicates(chunk, config)
+        allData.append(prepareData(chunk, config, keepCols))
+    allData = pd.concat(allData).fillna('')
+    allData.attrs['directed'] = config['directed']
+    return allData
+
+
+
+def validateCols(df, config):
+    """ Check for missing columns in df """
+    missingCols = set(config['allCols']) - set(df.columns)
+    if missingCols:
+        logging.error(f'{missingCols} not present in {config["input"]}\n')
+        raise ValueError
+    if config['directed']:
+        timeTypes = df[config['timeCols']].select_dtypes(
+            include=[np.number, np.datetime64])
+        invalidType = set(config['timeCols']) - set(timeTypes.columns)
+        if invalidType:
+            logging.error(
+                f'Invalid time type at columns {invalidType} in {config["input"]}\n')
+            raise ValueError
+
+
+def checkDuplicates(df, config):
+    """ Check for duplicate codes in row """
+    duplicates = df[config['codeCols']].apply(
+        lambda x: len(set(x.dropna())) < len(x.dropna()), axis=1)
+    return duplicates[duplicates].index
+
+
+def prepareData(df: pd.DataFrame, config: dict, keepCols: list = None) -> pd.DataFrame:
+    """Process ICD-10 multi-morbidity data.
+
+    Args:
+        df (pd.DataFrame) : ICD-10 Data.
+        config (str) : Preloaded config file.
+
+    Returns:
+        Processed DataFrame of strata and ICD-10 codes.
+    """
+    args = (config['codeCols'], config['timeCols'])
+    df[['codes', 'time']] = df.apply(extractCodeTimes, args=args, axis=1)
+    if config['strata']:
+        df['strata'] = df[config['strata']].apply(tuple, axis=1)
+    else:
+        df['strata'] = True
+    cols = ['strata', 'codes', 'time']
+    if keepCols is not None:
+        cols += keepCols
+    df = df.loc[:, cols]
+
+    return df
+
+
+def extractCodeTimes(x, codeCols, timeCols=None):
+    # Retrive unique codes and their associated time column
+    codeUniq = list(np.unique(x[codeCols].dropna(), return_index=True))
+    if len(codeUniq[0]) == 0:
+        return pd.Series([(), ()])
+    if timeCols is None:
+        timeUniq = tuple([True for i in range(len(codeUniq[0]))])
+    else:
+        timeUniq = [timeCols[i] for i in codeUniq[1]]
+        timeUniq = tuple(x[timeUniq].fillna(-1))
+    # Float node names not allowed by pyvis
+    if isinstance(codeUniq[0][0], float):
+        codes = tuple(int(c) for c in codeUniq[0])
+    else:
+        codes = tuple(codeUniq[0])
+    return pd.Series([codes, timeUniq])
+
+
 def networkAnalysis(config: str, allLinks):
     allLinks = allLinks.loc[
           (~allLinks['Node1'].isin(config['excludeNode']))
@@ -155,22 +251,25 @@ def networkAnalysis(config: str, allLinks):
     G.add_weighted_edges_from(allEdges)
 
     validRefs = validateNodes(config['refNode'], G)
+    if len(validRefs) > 0:
+        if config['wordcloud'] is not None:
+            generateWordCloud(G, validRefs, config['wordcloud'], config['fromRef'], maxWords=config['maxWords'])
 
-    # Make a WordCloud
-    if (len(validRefs) > 0) and (config['wordcloud'] is not None):
-        generateWordCloud(G, validRefs, config['wordcloud'], config['fromRef'])
-
-    G = makeEgo(G, validRefs, config['directed'], radius=config['radius'])
+        # Remove all nodes except top N closest to ref
+        refDist = getRefDistances(G.to_undirected(), validRefs).head(config['maxNode'])
+        keepNodes = list(refDist.index) + validRefs
+        removeNodes = [x for x in G.nodes() if x not in keepNodes]
+        G.remove_nodes_from(removeNodes)
+    else:
+        refDist = None
 
     if len(G.nodes()) == 1:
         logging.error(f'Reference node(s) {validRefs} have no connections.')
         return 1
 
-    cmap = cm.viridis_r if config['refNode'] else cm.viridis
     nodeSummary = getNodeSummary(
-        G, validRefs, alphaMin=0.5, size=config['maxNodeSize'],
-        scale=config['nodeScale'], cmap=cmap
-    )
+        G, validRefs, refDist, alphaMin=0.5, 
+        size=config['maxNodeSize'], scale=config['nodeScale'])
     for node in G.nodes():
         G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
         G.nodes[node]['label'] = str(node)
@@ -188,10 +287,11 @@ def networkAnalysis(config: str, allLinks):
         alpha = edgeSummary.loc[edge, 'alpha']
         G.edges[edge]['color'] = rgb2hex((0, 0, 0, alpha), keep_alpha=True)
 
-    remove = [x for x in G.nodes() if G.degree(x) < config['minDegree']]
-    G.remove_nodes_from(remove)
+    if len(validRefs) == 0:
+        removeNodes = [x for x in G.nodes() if G.degree(x) < config['minDegree']]
+        G.remove_nodes_from(removeNodes)
 
-    net = Network(height='900px', width='100%', directed=G.is_directed())
+    net = Network(height='700px', width='100%', directed=G.is_directed())
     net.from_nx(G)
     options = json.dumps({
         'edges': {'arrowStrikethrough': False},
@@ -212,43 +312,32 @@ def networkAnalysis(config: str, allLinks):
     net.save_graph(config['networkPlot'])
 
 
-def makeEgo(G, refNodes, directed, radius):
-    """ Subset graph based on distance to reference nodes """
-    if not refNodes:
-        return G
-    newG = nx.DiGraph() if directed else nx.Graph()
-    for ref in refNodes:
-        ego = nx.ego_graph(G, n=ref, radius=radius, undirected=True)
-        newG.update(ego)
-    return newG.copy()
-
-
-def getNodeSummary(G, refNodes, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis_r):
+def getNodeSummary(G, refNodes, refDist, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis):
     assert (size > 0) and (scale > 1)
-    centrality = pd.Series(nx.betweenness_centrality(G,  weight='weight'), name='Betweeness')
-    degree = pd.DataFrame(G.degree()).set_index(0)[1].rename('Degree')
-    summary = pd.concat([centrality, degree], axis=1)
+    summary = pd.DataFrame(G.degree()).rename({0: 'Node', 1: 'Degree'}, axis=1).set_index('Node')
     if G.is_directed():
         logging.warning('Community detection not supported for directed graphs.')
     else:
         partitionRGB = getNodePartion(G)
         summary = pd.concat([summary, partitionRGB], axis=1)
     if refNodes:
-        refRGB = getRefDistance(G, refNodes)
-        summary = pd.concat([summary, refRGB], axis=1)
+        summary = pd.concat([summary, refDist], axis=1)
+    else:
+        centrality = pd.Series(nx.betweenness_centrality(G,  weight='weight'), name='Betweeness')
+        summary = pd.concat([summary, centrality], axis=1)
     propertiesBy = 'refDistance' if refNodes else 'Betweeness'
     summary['colour'] = setColour(summary, propertiesBy, cmap=cmap)
-    reverse = True if propertiesBy == 'refDistance' else False
-    # Reference ndes are the same size as the largest non-reference
-    naFill = summary[propertiesBy].min()
+
+    naFill = (summary[propertiesBy].max() + summary[propertiesBy].min()) / 2
     if (summary[propertiesBy].dropna() == naFill).all():
         summary['size'] = size
         summary['alpha'] = 1
     else:
         summary['size'] = MinMaxScaler(
-            summary[propertiesBy].fillna(naFill), (size, size * scale), reverse)
+		summary[propertiesBy].fillna(naFill), (size, size * scale))
         summary['alpha'] = MinMaxScaler(
-            summary[propertiesBy].fillna(0), (alphaMin, 1), reverse)
+            summary[propertiesBy].fillna(1), (alphaMin, 1))
+
     return summary
 
 
@@ -262,7 +351,7 @@ def getEdgeSummary(G, alphaMin=0.5, size=1, scale=10):
     return summary
 
 
-def setColour(summary, colourBy, cmap=cm.viridis_r):
+def setColour(summary, colourBy, cmap=cm.viridis):
     values = summary[colourBy].dropna()
     norm = Normalize(
         vmin=np.nanmin(summary[colourBy]), vmax=np.nanmax(summary[colourBy]))
@@ -314,26 +403,6 @@ def validateNodes(nodes, G):
         else:
             validNodes.append(node)
     return validNodes
-
-
-def getRefDistance(G, refNodes):
-    refRGB = {}
-    G = G.to_undirected() # Ignore direction for path length
-    for node in sorted(G.nodes()):
-        if node in refNodes:
-            refRGB[node] = np.nan
-            continue
-        for i, ref in enumerate(refNodes):
-            if nx.has_path(G, ref, node):
-                dist = nx.dijkstra_path_length(G, ref, node, weight='weight')
-            else:
-                dist = np.nan
-            # Set value for first check
-            if (i == 0):
-                refRGB[node] = dist
-            elif not np.isnan(dist):
-                refRGB[node] = np.nanmin([refRGB[node], dist])
-    return pd.Series(refRGB).to_frame().rename({0: 'refDistance'}, axis=1)
 
 
 def retrieveEdge(x, directed, stat):
@@ -417,26 +486,26 @@ def permutationTest(df, stratifyBy, group, ref, nReps, chunkSize=10000):
 
 
 def reorderGroups(groups: list):
-    """ Order strings numerically where possible.
-    e.g. string representations of numeric intervals.
+    """ Order strings numerically where possible. e.g. 
+        string representations of numeric intervals.
     """
     numeric = []
     str_group = [str(group) for group in groups]
     for group in str_group:
         # Remove non-numeric characters
-        group = re.split(r'\D+', group)
+        group_split = re.split(r'\D+', group)
         # Remove empty strings
-        group = list(filter(None, group))
-        if not group:
-            # Return unchanged if no numeric
-            return groups
-        numeric.append(float(group[0]))
+        group_split = list(filter(None, group_split))
+        if not group_split:
+            numeric.append(np.inf)
+        else:
+            numeric.append(float(group_split[0]))
     # Sort by numeric
-    groups = [groups[i] for i in np.argsort(numeric)]
-    return groups
+    numeric = [groups[i] for i in np.argsort(numeric)]
+    return numeric
 
 
-def refDistances(G, validRefs, fromRef=True):
+def getRefDistances(G, validRefs, fromRef=True, reverse=True):
     """ Get min distance of each node from
         reference nodes for wordcloud. """
     if (not fromRef) and G.is_directed():
@@ -447,9 +516,9 @@ def refDistances(G, validRefs, fromRef=True):
     # Remove reference nodes
     refDist = refDist.loc[~refDist.index.isin(validRefs)]
     frequencies = pd.Series(
-        data=MinMaxScaler(refDist, feature_range=(0.1, 1), reverse=True),
+        data=MinMaxScaler(refDist, feature_range=(0.1, 1), reverse=reverse),
         index=refDist.index)
-    return frequencies.to_dict()
+    return frequencies.sort_values(ascending=False).rename('refDistance')
 
 
 def getMinShortestPath(G, refs):
@@ -460,15 +529,17 @@ def getMinShortestPath(G, refs):
         p = pd.Series(nx.shortest_path_length(
             G, source=ref, weight='weight'))
         paths.append(p)
-    return pd.concat(paths, axis=1).min(axis=1)
+    return pd.concat(paths, axis=1).mean(axis=1)
 
 
-def generateWordCloud(G, refs, out, fromRef=True):
+def generateWordCloud(G, refs, out, fromRef=True, maxWords=None):
     """ Make WordCloud of nodes scaled to
         proximity to reference nodes """
     assert len(refs) > 0
-    frequencies = refDistances(G, refs, fromRef)
+    frequencies = getRefDistances(G, refs, fromRef)
+    if maxWords is not None:
+       frequencies = frequencies.head(maxWords)
     wc = WordCloud(prefer_horizontal=1, width=1600, height=900)
-    wc.generate_from_frequencies(frequencies)
+    wc.generate_from_frequencies(frequencies.to_dict())
     with open(out, 'w') as fh:
         fh.write(wc.to_svg(embed_font=True))
