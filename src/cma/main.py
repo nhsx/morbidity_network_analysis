@@ -36,30 +36,36 @@ def networkAnalysisOnly(config: str):
 
 def morbidityZ(config: str, out: str, morbidities: list):
     config = Config(config).config
+
     np.random.seed(config['seed'])
 
-    df = loadData(config, keepStrata=True)
-    strata = config['strata']
-    if len(strata) == 1:
+    df = loadData(config, keepCols=config['demographics'])
+
+    demo = config['demographics']
+    if len(demo) == 1:
         assert 'tempCol' not in df.columns
         df['tempCol'] = True
         plotgrid = (1,)
     else:
-        plotgrid = (round(len(strata) / 2), 2)
+        plotgrid = (round(len(demo) / 2), 2)
 
-    morbidities = set(tuple(morbidities))
-    df['pair'] = df['codes'].apply(lambda x: morbidities.issubset(x))
+    #morbidities = set(tuple(morbidities))
+    #df['pair'] = df['codes'].apply(lambda x: morbidities.issubset(x))
+    morbidities = set(tuple(config['refNode']))
+    df['pair'] = df['codes'].apply(lambda x: not morbidities.isdisjoint(x))
     fig, axes = plt.subplots(*plotgrid, figsize=(16,9))
-    axes = [axes] if len(strata) == 1 else axes.flatten()
+    axes = [axes] if len(demo) == 1 else axes.flatten()
 
-    for i, stratum in enumerate(strata):
-        if len(strata) == 1:
+    for i, stratum in enumerate(demo):
+        if len(demo) == 1:
             stratifyBy = ['tempCol']
         else:
-            stratifyBy = [x for x in strata if x != stratum]
+            stratifyBy = [x for x in demo if x != stratum]
+
         agg = permutationTest(
             df, stratifyBy, stratum, ref='pair',
             nReps=config['permutations'], chunkSize=2000)
+
         # Exclude groups with too few positive samples
         agg.loc[agg['statistic'] < config['minObs'], 'z'] = np.nan
         axes[i].axhline(0, color='black', ls='--')
@@ -76,7 +82,7 @@ def morbidityZ(config: str, out: str, morbidities: list):
         axes[i].set_xlabel(stratum)
 
     # Turn off blank axis
-    if len(axes) > len(strata):
+    if len(axes) > len(demo):
         axes[i+1].axis('off')
 
     fig.suptitle(f'{morbidities}')
