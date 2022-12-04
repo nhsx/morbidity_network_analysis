@@ -41,8 +41,8 @@ py -m pip install git+https://github.com/nhsx/morbidity_network_analysis.git
 <summary><strong>Unix/macOS</strong></summary>
 
 ```bash
-python -m venv esneft_tools
-source esneft_tools/bin/activate
+python -m venv multinet
+source multinet/bin/activate
 python3 -m pip install git+https://github.com/nhsx/morbidity_network_analysis.git
 ```
 </details>
@@ -51,8 +51,8 @@ python3 -m pip install git+https://github.com/nhsx/morbidity_network_analysis.gi
 <summary><strong>Windows</strong></summary>
 
 ```bash
-py -m venv esneft_tools
-esneft_tools/Scripts/Activate.ps1
+py -m venv multinet
+multinet/Scripts/Activate.ps1
 py -m pip install git+https://github.com/nhsx/morbidity_network_analysis.git
 ```
 
@@ -205,4 +205,4 @@ Distributed under the MIT License. _See [LICENSE](./LICENSE) for more informatio
 
 
 ### Contact
-If you have any other questions please contact the author [Stephen Richer](mailto:stephen.richer@proton.me?subject=[GitHub]%20esneft_tools)
+If you have any other questions please contact the author [Stephen Richer](mailto:stephen.richer@proton.me?subject=[GitHub]%20multinet)
