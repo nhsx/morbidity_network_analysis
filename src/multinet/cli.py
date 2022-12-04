@@ -81,7 +81,7 @@ def parseArgs() -> argparse.Namespace:
     sp4.set_defaults(function=simulateData)
 
     sp5 = subparser.add_parser(
-        'strata',
+        'enriched',
         description=multinet.simulate.__doc__,
         help='Estimate morbidity enrichment by strata.',
         parents=[baseParser],
