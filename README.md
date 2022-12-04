@@ -149,7 +149,7 @@ refNode: 30 # Node(s) to centre the Network Plot (optional).
 maxNode: 10 # Plot N closest nodes to reference (if refNode is set).
 ```
 ![Example Network Output](./README_files/exampleNet-ref.png)
- <br> Example network with reference node 30 and 10 closest nodes. Reference nodes are coloured black.
+ <br> Example network with reference node 30 and 10 closest nodes. Reference nodes are black.
 
 ### Wordcloud
 
