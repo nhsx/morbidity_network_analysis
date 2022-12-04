@@ -253,7 +253,8 @@ def networkAnalysis(config: str, allLinks):
     validRefs = validateNodes(config['refNode'], G)
     if len(validRefs) > 0:
         if config['wordcloud'] is not None:
-            generateWordCloud(G, validRefs, config['wordcloud'], config['fromRef'], maxWords=config['maxWords'])
+            generateWordCloud(G, validRefs, config['wordcloud'],
+                              config['fromRef'], maxWords=config['maxWords'])
 
         # Remove all nodes except top N closest to ref
         refDist = getRefDistances(G.to_undirected(), validRefs).head(config['maxNode'])
@@ -268,7 +269,7 @@ def networkAnalysis(config: str, allLinks):
         return 1
 
     nodeSummary = getNodeSummary(
-        G, validRefs, refDist, alphaMin=0.5, 
+        G, validRefs, refDist, alphaMin=0.5,
         size=config['maxNodeSize'], scale=config['nodeScale'])
     for node in G.nodes():
         G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
@@ -281,7 +282,7 @@ def networkAnalysis(config: str, allLinks):
     maxEdgeWidth = config['maxNodeSize'] / 20
     edgeSummary = getEdgeSummary(
         G, alphaMin=0.5, size=maxEdgeWidth, scale=config['nodeScale'])
-        
+
     for edge in G.edges():
         G.edges[edge]['value'] = edgeSummary.loc[edge, 'width']
         alpha = edgeSummary.loc[edge, 'alpha']
@@ -486,7 +487,7 @@ def permutationTest(df, stratifyBy, group, ref, nReps, chunkSize=10000):
 
 
 def reorderGroups(groups: list):
-    """ Order strings numerically where possible. e.g. 
+    """ Order strings numerically where possible. e.g.
         string representations of numeric intervals.
     """
     numeric = []

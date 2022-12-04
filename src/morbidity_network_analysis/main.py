@@ -4,8 +4,8 @@ from .utils import *
 import sys
 import pandas as pd
 import seaborn as sns
-import cma.edgeAnalysis as ea
 import matplotlib.pyplot as plt
+import morbidity_network_analysis.edgeAnalysis as ea
 
 
 def main(config: str):

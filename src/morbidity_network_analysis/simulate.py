@@ -29,9 +29,12 @@ def simulateData(
 
 def writeConfig(config: str = None):
     config_settings = ({
-        'input': 'CMA-example.csv',
-        'edgeData': 'CMA-example-processed.csv.gz',
+        'input': 'MMA-example.csv',
+        'edgeData': 'MMA-example-processed.csv.gz',
         'networkPlot': 'exampleNetwork-ref.html',
+        'wordcloud': 'MMA-example-wordcloud.svg',
+        'fromRef': True,
+        'refNode': 12,
         'strata': ['Age'],
         'excludeNode': [1],
         'radius': 1,

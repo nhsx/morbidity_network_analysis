@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-from cma.utils import Config, loadData, validateCols, checkDuplicates, prepareData, extractCodeTimes
+from morbidity_network_analysis.utils import \
+    Config, loadData, validateCols, checkDuplicates, \
+    prepareData, extractCodeTimes
 import numpy as np
 import pandas as pd
 from itertools import combinations
