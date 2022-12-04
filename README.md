@@ -139,7 +139,7 @@ Specifically, a given node is more likely to associate with numeric factors (e.g
 MorbiNet can successfully recover these relationships in the network analysis.
 Finally node relationships are temporal to mimic diagnosis time - in the simulated data larger numbers always occur before smaller.
 
-![Example Network Output](./README_files/exampleNet.png)
+![Example Network Output](./README_files/exampleNet-ref.png)
 
 ### Contributing
 
