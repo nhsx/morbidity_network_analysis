@@ -135,26 +135,42 @@ Optimal network visualisation parameters can be quickly explored without having 
 ## Example output
 The example dataset is designed to test MultiNet functionality and illustrate its output.
 The simulated data defines relationship among the nodes according to their numerical values.
-Specifically, a given node is more likely to associate with numeric factors (e.g. node 8 -> 4, 2, 1)
+Specifically, a given node is more likely to associate with numeric factors (e.g. node 8 -> 4, 2, 1).
 MultiNet can successfully recover these directed relationships in the network analysis.
+
 
 ### Network Plot
 The conventional way to visualise connections is via a Network plot.
 The user may choose to visualise the entire network or, as below, the network centered on a reference node(s).
 This is often helpful when working with large networks or if you are interested in specific nodes.
 
-Two settings in the configuration file control the output of the Network Plot.
+If a reference node is provided then node size and colour are scaled to the distance from the reference node.
+Otherwise, node size and colour are scaled to betweenness centrality.
+
+Three settings in the configuration file control the output of the Network Plot.
 ```yaml
-refNode: 30 # Node(s) to centre the Network Plot (optional).  
-maxNode: 10 # Plot N closest nodes to reference (if refNode is set).
+refNode: 30    # Node(s) to centre the Network Plot (optional).  
+maxNode: 10    # Plot N closest nodes to reference (if refNode is set).
+excludeNode: 1 # Exclude node(s) from the visualisation (optional).
 ```
+
 ![Example Network Output](./README_files/exampleNet-ref.png)
  <br> Example network with reference node 30 and 10 closest nodes. Reference nodes are black.
 
-### Wordcloud
+
+### WordCloud
+
+```yaml
+refNode: 30    # Node(s) to centre the WordCloud.  
+maxWords: None # Include N closest words, set None to include all.
+excludeNode: 1 # Exclude node(s) from the visualisation (optional).
+```
+
+![Example WordCloud Output](./README_files/exampleNet-wordcloud.svg)
+ <br> Example WordCloud with reference node 30.
+
 
 ### Contributing
-
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
 1. Fork the Project
@@ -163,10 +179,10 @@ Contributions are what make the open source community such an amazing place to l
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
-### License
 
+### License
 Distributed under the MIT License. _See [LICENSE](./LICENSE) for more information._
 
-### Contact
 
+### Contact
 If you have any other questions please contact the author [Stephen Richer](mailto:stephen.richer@proton.me?subject=[GitHub]%20esneft_tools)
