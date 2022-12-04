@@ -269,24 +269,22 @@ def networkAnalysis(config: str, allLinks):
         return 1
 
     nodeSummary = getNodeSummary(
-        G, validRefs, refDist, alphaMin=0.5,
+        G, validRefs, refDist,
         size=config['maxNodeSize'], scale=config['nodeScale'])
     for node in G.nodes():
         G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
         G.nodes[node]['label'] = str(node)
         G.nodes[node]['font'] = {'size': 200}
         rgb = nodeSummary.loc[node, 'colour']
-        alpha = nodeSummary.loc[node, 'alpha']
-        G.nodes[node]['color'] = rgb2hex((*rgb, alpha), keep_alpha=True)
+        G.nodes[node]['color'] = rgb2hex(rgb)
 
-    maxEdgeWidth = config['maxNodeSize'] / 20
+    maxEdgeWidth = config['maxNodeSize'] / 10
     edgeSummary = getEdgeSummary(
-        G, alphaMin=0.5, size=maxEdgeWidth, scale=config['nodeScale'])
+        G, size=maxEdgeWidth, scale=config['nodeScale'])
 
     for edge in G.edges():
         G.edges[edge]['value'] = edgeSummary.loc[edge, 'width']
-        alpha = edgeSummary.loc[edge, 'alpha']
-        G.edges[edge]['color'] = rgb2hex((0, 0, 0, alpha), keep_alpha=True)
+        G.edges[edge]['color'] = rgb2hex((0, 0, 0))
 
     if len(validRefs) == 0:
         removeNodes = [x for x in G.nodes() if G.degree(x) < config['minDegree']]
@@ -313,7 +311,7 @@ def networkAnalysis(config: str, allLinks):
     net.save_graph(config['networkPlot'])
 
 
-def getNodeSummary(G, refNodes, refDist, alphaMin=0.5, size=50, scale=10, cmap=cm.viridis):
+def getNodeSummary(G, refNodes, refDist, size=50, scale=10, cmap=cm.Reds):
     assert (size > 0) and (scale > 1)
     summary = pd.DataFrame(G.degree()).rename({0: 'Node', 1: 'Degree'}, axis=1).set_index('Node')
     if G.is_directed():
@@ -332,27 +330,23 @@ def getNodeSummary(G, refNodes, refDist, alphaMin=0.5, size=50, scale=10, cmap=c
     naFill = (summary[propertiesBy].max() + summary[propertiesBy].min()) / 2
     if (summary[propertiesBy].dropna() == naFill).all():
         summary['size'] = size
-        summary['alpha'] = 1
     else:
         summary['size'] = MinMaxScaler(
 		summary[propertiesBy].fillna(naFill), (size, size * scale))
-        summary['alpha'] = MinMaxScaler(
-            summary[propertiesBy].fillna(1), (alphaMin, 1))
 
     return summary
 
 
-def getEdgeSummary(G, alphaMin=0.5, size=1, scale=10):
+def getEdgeSummary(G, size=1, scale=10):
     summary = pd.DataFrame(
         {edge: G.edges[edge]['weight'] for edge in G.edges()}, index=['weight']).T
     summary['logWeight'] = np.log(summary['weight'])
-    summary['alpha'] = MinMaxScaler(summary['logWeight'], (alphaMin, 1), reverse=True)
     summary['width'] = MinMaxScaler(
         summary['logWeight'], (size, size * scale), reverse=True)
     return summary
 
 
-def setColour(summary, colourBy, cmap=cm.viridis):
+def setColour(summary, colourBy, cmap=cm.Reds):
     values = summary[colourBy].dropna()
     norm = Normalize(
         vmin=np.nanmin(summary[colourBy]), vmax=np.nanmax(summary[colourBy]))
@@ -426,9 +420,7 @@ def processLinks(links, directed, stat='OR', minVal=1, alpha=0.01, minObs=1):
         & (links['minObs'] >= minObs)
     ]
     if directed:
-        sigLinks = sigLinks.loc[
-              (sigLinks['FDRprop'] < alpha)
-        ]
+        sigLinks = sigLinks.loc[(sigLinks['FDRprop'] < alpha)]
     allEdges = sigLinks.apply(
         retrieveEdge, args=(directed, stat), axis=1).tolist()
     return allNodes, allEdges
