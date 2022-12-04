@@ -162,7 +162,8 @@ excludeNode: 1 # Exclude node(s) from the visualisation (optional).
 
 ```yaml
 refNode: 30    # Node(s) to centre the WordCloud.  
-maxWords: None # Include N closest words, set None to include all.
+maxWords: None # Include N closest nodes, set None to include all.
+fromRef: True  # Plot from reference or to reference (directed only)
 excludeNode: 1 # Exclude node(s) from the visualisation (optional).
 ```
 
