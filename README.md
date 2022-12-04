@@ -166,6 +166,10 @@ minObs: 100 # Exclude edges with too few observations.
 
 
 ### WordCloud
+If reference nodes are provided then the user may also visualise relationships with a WordCloud.
+Here, the size of each node is scaled to the distance from the reference node.
+If the network is directed the WordCloud can either represent downstream nodes _from_ the reference or upstream nodes _to_ the reference.
+This is controlled via `config['fromRef']`.
 
 Configuration settings that control the output of the WordCloud plot.
 ```yaml
@@ -177,7 +181,7 @@ maxWords: None # Include N closest nodes, set None to include all.
 ```
 
 ![Example WordCloud Output](./README_files/exampleNet-wordcloud.svg)
- <br> Example WordCloud with reference node 30.
+ <br> Example WordCloud with all downstream nodes from reference node 30.
 
 
 ### Enrichment Analysis with Stratification
@@ -196,7 +200,7 @@ minObs: 100 # Exclude stratified groups with too few observations.
 ```
 
 ```bash
-multinet strata config.yaml
+multinet enriched config.yaml
 ```
 
 ![Example Enrichment](./README_files/exampleNet-enrichment.svg)
