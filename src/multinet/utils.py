@@ -75,20 +75,20 @@ class Config():
             'excludeNode': [],
             'maxNode': 10,
             'strata': None,
-            'seperator': None,
-            'chunkSize': None,
-            'seed': 42,
             'stat': 'OR',
-            'permutations': 1000,
             'minObs': 100,
             'alpha': 0.01,
             'minDegree': 0,
-            'plotDPI': 300,
             'wordcloud': None,
             'fromRef': True,
             'maxWords': None,
-            'maxNodeSize': 50,
-            'nodeScale': 10
+            'enrichmentNode': [],
+            'demographics': None,
+            'enrichmentPlot': None,
+            'seed': 42,
+            'permutations': 1000,
+            'chunkSize': None,
+            'seperator': None
         })
 
     def _postProcessConfig(self):
@@ -97,8 +97,18 @@ class Config():
         config['allCols'] = []
         if config['strata'] is not None:
             config['allCols'] += config['strata']
+            if config['demographics'] is None:
+                logging.info(
+                    f'config["demographics"] not set - setting '
+                    f'to config["strata"] ({config["strata"]}).')
+                config['demographics'] = config['strata']
+            else:
+                config['allCols'] += config['demographics']
+        if config['demographics'] is not None:
+            if not isinstance(config['demographics'], list):
+                config[group] = [config[group]]
         # Ensure single value is in list
-        for group in ['refNode', 'excludeNode']:
+        for group in ['refNode', 'excludeNode', 'enrichmentNode']:
             if not isinstance(config[group], list):
                 config[group] = [config[group]]
                 # Convert to string
@@ -109,18 +119,13 @@ class Config():
                 f'Nodes {refAndExclude} are in reference and exclusion list')
             raise ValueError
         assert config['stat'] in ['OR', 'RR']
-        intVars = ([
-            'minDegree', 'seed', 'permutations',
-            'minObs', 'plotDPI', 'maxNodeSize', 'nodeScale'
-        ])
+        intVars = ['minDegree', 'seed', 'permutations', 'minObs']
         for par in intVars:
             if not isinstance(config[par], int):
                 logging.error(
                     f'Non-integer argument passed to config: {par} '
                     f'({config[par]}) setting to {self.default[par]}.')
                 config[par] = self.default[par]
-        assert config['maxNodeSize'] > 0
-        assert config['nodeScale'] > 1
         if isinstance(config['codes'], list):
             config['directed'] = False
             config['codeCols'] = config['codes']
@@ -269,7 +274,7 @@ def networkAnalysis(config: str, allLinks):
 
     nodeSummary = getNodeSummary(
         G, validRefs, refDist,
-        size=config['maxNodeSize'], scale=config['nodeScale'])
+        size=50, scale=10)
     for node in G.nodes():
         G.nodes[node]['size'] = nodeSummary.loc[node, 'size']
         G.nodes[node]['label'] = str(node)
@@ -277,9 +282,7 @@ def networkAnalysis(config: str, allLinks):
         rgb = nodeSummary.loc[node, 'colour']
         G.nodes[node]['color'] = rgb2hex(rgb)
 
-    maxEdgeWidth = config['maxNodeSize'] / 10
-    edgeSummary = getEdgeSummary(
-        G, size=maxEdgeWidth, scale=config['nodeScale'])
+    edgeSummary = getEdgeSummary(G, size=5, scale=10)
 
     for edge in G.edges():
         G.edges[edge]['value'] = edgeSummary.loc[edge, 'width']
@@ -310,7 +313,9 @@ def networkAnalysis(config: str, allLinks):
     net.save_graph(config['networkPlot'])
 
 
-def getNodeSummary(G, refNodes, refDist, size=50, scale=10, cmap=cm.Reds):
+def getNodeSummary(
+        G, refNodes, refDist, size: int = 50,
+        scale: int = 10, cmap=cm.Reds):
     assert (size > 0) and (scale > 1)
     summary = pd.DataFrame(G.degree()).rename({0: 'Node', 1: 'Degree'}, axis=1).set_index('Node')
     if G.is_directed():
@@ -336,7 +341,7 @@ def getNodeSummary(G, refNodes, refDist, size=50, scale=10, cmap=cm.Reds):
     return summary
 
 
-def getEdgeSummary(G, size=1, scale=10):
+def getEdgeSummary(G, size: int = 5, scale: int = 10):
     summary = pd.DataFrame(
         {edge: G.edges[edge]['weight'] for edge in G.edges()}, index=['weight']).T
     summary['logWeight'] = np.log(summary['weight'])

@@ -2,6 +2,7 @@
 
 from .utils import *
 import sys
+import logging
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -34,13 +35,20 @@ def networkAnalysisOnly(config: str):
     networkAnalysis(config, allLinks)
 
 
-def morbidityZ(config: str, out: str, morbidities: list):
+def morbidityZ(config: str):
     config = Config(config).config
-
     np.random.seed(config['seed'])
-
+    sns.set(font_scale=2, style='white')
+    if not config['enrichmentNode']:
+        logging.error('No node(s) provided to config["enrichmentNode"].')
+        return 1
+    elif config['demographics'] is None:
+        logging.error('No strata provided to config["demographics"].')
+        return 1
+    elif config['enrichmentPlot'] is None:
+        logging.error('No output filename provided to config["enrichmentPlot"].')
+        return 1
     df = loadData(config, keepCols=config['demographics'])
-
     demo = config['demographics']
     if len(demo) == 1:
         assert 'tempCol' not in df.columns
@@ -49,9 +57,7 @@ def morbidityZ(config: str, out: str, morbidities: list):
     else:
         plotgrid = (round(len(demo) / 2), 2)
 
-    #morbidities = set(tuple(morbidities))
-    #df['pair'] = df['codes'].apply(lambda x: morbidities.issubset(x))
-    morbidities = set(tuple(config['refNode']))
+    morbidities = set(tuple(config['enrichmentNode']))
     df['pair'] = df['codes'].apply(lambda x: not morbidities.isdisjoint(x))
     fig, axes = plt.subplots(*plotgrid, figsize=(16,9))
     axes = [axes] if len(demo) == 1 else axes.flatten()
@@ -87,4 +93,4 @@ def morbidityZ(config: str, out: str, morbidities: list):
 
     fig.suptitle(f'{morbidities}')
     fig.tight_layout()
-    fig.savefig(out, dpi=config['plotDPI'])
+    fig.savefig(config['enrichmentPlot'])

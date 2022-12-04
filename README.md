@@ -101,7 +101,7 @@ The ```simulate``` sub-command generates suitably formatted input data for testi
 It also writes an example config file in YAML format.
 
 ```bash
-multinet simulate --config config.yaml > MultiNet-example.csv
+multinet simulate --config config.yaml > MultiNet-data.csv
 ```
 
 ### Stage 1 - Processing input and generate edge weights.
@@ -147,11 +147,15 @@ This is often helpful when working with large networks or if you are interested 
 If a reference node is provided then node size and colour are scaled to the distance from the reference node.
 Otherwise, node size and colour are scaled to betweenness centrality.
 
-Three settings in the configuration file control the output of the Network Plot.
+These settings in the configuration file control the output of the Network Plot.
 ```yaml
-refNode: 30    # Node(s) to centre the Network Plot (optional).  
-maxNode: 10    # Plot N closest nodes to reference (if refNode is set).
+refNode: 30 # Node(s) to centre the Network Plot (optional).  
+maxNode: 10 # Plot nearest nodes to reference (if refNode is set).
 excludeNode: 1 # Exclude node(s) from the visualisation (optional).
+minDegree: 0 # Exclude nodes by degree (if refNode is NOT set).
+stat: OR # Set weights by Odds Ratio (OR) or Risk Ratio (RR)
+alpha: 0.01 # Exclude edges with adj. p-value less than alpha.
+minObs: 100 # Exclude edges with too few observations.
 ```
 
 ![Example Network Output](./README_files/exampleNet-ref.png)
@@ -161,14 +165,29 @@ excludeNode: 1 # Exclude node(s) from the visualisation (optional).
 ### WordCloud
 
 ```yaml
-refNode: 30    # Node(s) to centre the WordCloud.  
+refNode: 30 # Node(s) to centre the WordCloud.  
 maxWords: None # Include N closest nodes, set None to include all.
-fromRef: True  # Plot from reference or to reference (directed only)
+fromRef: true # Plot "from" reference or "to" reference (directed only)
 excludeNode: 1 # Exclude node(s) from the visualisation (optional).
 ```
 
 ![Example WordCloud Output](./README_files/exampleNet-wordcloud.svg)
  <br> Example WordCloud with reference node 30.
+
+
+### Enrichment Analysis with Stratification
+
+```yaml
+strataNode: 1 # Node to assess enrichment within each demographic.
+demographics: Age # Demographics of interest (required).
+strataPlot: MultiNet-example-strata.svg # Filename for plot (required).
+seed: 42 # Seed to control random permutations.
+permutations: 1000 # Total permutations to perform.
+minObs: 100 # Exclude stratified groups with too few observations.
+```
+
+![Example Enrichment](./README_files/exampleNet-enrichment.svg)
+ <br> Example enrichment of node 1 by Age.
 
 
 ### Contributing

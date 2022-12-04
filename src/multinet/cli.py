@@ -88,11 +88,6 @@ def parseArgs() -> argparse.Namespace:
         epilog=parser.epilog)
     sp5.add_argument(
         'config', help='YAML configuration file.')
-    sp5.add_argument(
-        'out', help='Path to write figure.')
-    sp5.add_argument(
-        'morbidities', nargs='*',
-        help='Morbidity set to test for enrichment.')
     sp5.set_defaults(function=morbidityZ)
 
     args = parser.parse_args()

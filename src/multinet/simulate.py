@@ -29,10 +29,10 @@ def simulateData(
 
 def writeConfig(config: str = None):
     config_settings = ({
-        'input': 'MultiNet-example.csv',
-        'edgeData': 'MultiNet-example-processed.csv.gz',
-        'networkPlot': 'exampleNetwork-ref.html',
-        'wordcloud': 'MultiNet-example-wordcloud.svg',
+        'input': 'MultiNet-data.csv',
+        'edgeData': 'MultiNet-processed.csv.gz',
+        'networkPlot': 'MultiNet.html',
+        'wordcloud': 'MultiNet-wordcloud.svg',
         'fromRef': True,
         'refNode': 30,
         'maxNode': 10,
@@ -43,7 +43,10 @@ def writeConfig(config: str = None):
             'code2': 'time2',
             'code3': 'time3',
             'code4': 'time4'},
-        'seed': 42
+        'seed': 42,
+        'demographics': ['Age'],
+        'enrichmentNode': 1,
+        'enrichmentPlot': 'MultiNet-enrichment.svg'
     })
     if config is None:
         yaml.dump(config_settings, sys.stderr)
