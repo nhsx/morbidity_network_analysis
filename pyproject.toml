@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = 'morbidity_network_analysis'
+name = 'multinet'
 version = "0.1.0"
 authors = [
   {email = "stephen.richer@proton.me"},
@@ -12,7 +12,7 @@ authors = [
 description = 'Boilerplate package with example numerical tests.'
 readme = 'README.md'
 requires-python = ">=3.7"
-keywords = ['morbidity_network_analysis']
+keywords = ['morbidity_network_analysis', 'multinet']
 license = {file = "LICENSE"}
 classifiers=[
     'Natural Language :: English',
@@ -45,4 +45,4 @@ dependencies = [
 repository = 'https://github.com/nhsx/morbidity_network_analysis'
 
 [project.scripts]
-mma = "morbidity_network_analysis.cli:parseArgs"
+multinet = "multinet.cli:parseArgs"

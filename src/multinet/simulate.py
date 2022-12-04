@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" Generate test data for CMA. """
+""" Generate test data for MultiNet. """
 
 
 import sys
@@ -29,12 +29,12 @@ def simulateData(
 
 def writeConfig(config: str = None):
     config_settings = ({
-        'input': 'MMA-example.csv',
-        'edgeData': 'MMA-example-processed.csv.gz',
+        'input': 'MultiNet-example.csv',
+        'edgeData': 'MultiNet-example-processed.csv.gz',
         'networkPlot': 'exampleNetwork-ref.html',
-        'wordcloud': 'MMA-example-wordcloud.svg',
+        'wordcloud': 'MultiNet-example-wordcloud.svg',
         'fromRef': True,
-        'refNode': 12,
+        'refNode': 30,
         'strata': ['Age'],
         'excludeNode': [1],
         'radius': 1,

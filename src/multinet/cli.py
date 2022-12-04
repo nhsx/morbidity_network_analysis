@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-""" Multimordibity Network Analysis """
+""" MultiNet - Multimordibity Network Analysis """
 
 import sys
 import logging
 import argparse
 from timeit import default_timer as timer
 from . import __version__
-import morbidity_network_analysis as mma
+import multinet
 from .main import main, edgeAnalysisOnly, networkAnalysisOnly, morbidityZ
 from .simulate import simulateData
 
@@ -27,7 +27,7 @@ def parseArgs() -> argparse.Namespace:
     sp1 = subparser.add_parser(
         'analyse',
         description=main.__doc__,
-        help='Run complete Network Analysis pipeline.',
+        help='Run full MultiNet pipeline.',
         parents=[baseParser],
         epilog=parser.epilog)
     sp1.add_argument(
@@ -56,7 +56,7 @@ def parseArgs() -> argparse.Namespace:
 
     sp4 = subparser.add_parser(
         'simulate',
-        description=mma.simulate.__doc__,
+        description=multinet.simulate.__doc__,
         help='Simulate test data.',
         parents=[baseParser],
         epilog=parser.epilog)
@@ -64,7 +64,7 @@ def parseArgs() -> argparse.Namespace:
         '--config',
         help='Path to write default config file (default: stderr)')
     sp4.add_argument(
-        '--nNodes', type=int, default=24,
+        '--nNodes', type=int, default=30,
         help='Total nodes in simulated network (default: %(default)s)')
     sp4.add_argument(
         '--nRecords', type=int, default=200_000,
@@ -82,7 +82,7 @@ def parseArgs() -> argparse.Namespace:
 
     sp5 = subparser.add_parser(
         'strata',
-        description=mma.simulate.__doc__,
+        description=multinet.simulate.__doc__,
         help='Estimate morbidity enrichment by strata.',
         parents=[baseParser],
         epilog=parser.epilog)
@@ -93,7 +93,6 @@ def parseArgs() -> argparse.Namespace:
     sp5.add_argument(
         'morbidities', nargs='*',
         help='Morbidity set to test for enrichment.')
-
     sp5.set_defaults(function=morbidityZ)
 
     args = parser.parse_args()

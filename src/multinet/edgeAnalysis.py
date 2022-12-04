@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from morbidity_network_analysis.utils import \
+from multinet.utils import \
     Config, loadData, validateCols, checkDuplicates, \
     prepareData, extractCodeTimes
 import numpy as np
