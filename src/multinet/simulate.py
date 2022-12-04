@@ -35,9 +35,9 @@ def writeConfig(config: str = None):
         'wordcloud': 'MultiNet-example-wordcloud.svg',
         'fromRef': True,
         'refNode': 30,
+        'maxNode': 10,
         'strata': ['Age'],
         'excludeNode': [1],
-        'radius': 1,
         'codes': {
             'code1': 'time1',
             'code2': 'time2',

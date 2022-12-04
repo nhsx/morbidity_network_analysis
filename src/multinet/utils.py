@@ -75,7 +75,6 @@ class Config():
             'excludeNode': [],
             'maxNode': 10,
             'strata': None,
-            'demographics': None,
             'seperator': None,
             'chunkSize': None,
             'seed': 42,

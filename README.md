@@ -78,12 +78,12 @@ edgeData: MultiNet-example-processed.csv.gz
 networkPlot: exampleNetwork.html
 wordcloud: MultiNet-example-wordcloud.svg
 refNode: 30
+maxNode: 10
 fromRef: True
 strata:
     - Age
 excludeNode:
     - 1
-radius: 2
 codes:
     code1: time1
     code2: time2
@@ -133,13 +133,25 @@ Optimal network visualisation parameters can be quickly explored without having 
 
 
 ## Example output
-The example network is designed to test MultiNet functionality and configuration.
+The example dataset is designed to test MultiNet functionality and illustrate its output.
 The simulated data defines relationship among the nodes according to their numerical values.
 Specifically, a given node is more likely to associate with numeric factors (e.g. node 8 -> 4, 2, 1)
-MorbiNet can successfully recover these relationships in the network analysis.
-Finally node relationships are temporal to mimic diagnosis time - in the simulated data larger numbers always occur before smaller.
+MultiNet can successfully recover these directed relationships in the network analysis.
 
+### Network Plot
+The conventional way to visualise connections is via a Network plot.
+The user may choose to visualise the entire network or, as below, the network centered on a reference node(s).
+This is often helpful when working with large networks or if you are interested in specific nodes.
+
+Two settings in the configuration file control the output of the Network Plot.
+```yaml
+refNode: 30 # Node(s) to centre the Network Plot (optional).  
+maxNode: 10 # Plot N closest nodes to reference (if refNode is set).
+```
 ![Example Network Output](./README_files/exampleNet-ref.png)
+ <br> Example Network Plot with reference node 30 and 10 closest nodes. Reference nodes are coloured black.
+
+### Wordcloud
 
 ### Contributing
 
