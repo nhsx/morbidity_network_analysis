@@ -10,6 +10,9 @@ import numpy as np
 import pandas as pd
 
 
+sys.stdout.reconfigure(encoding='utf-8')
+
+
 def simulateData(
         config: str, nNodes: int, nRecords: int,
         codesPerRecord: int, weight: float, seed: int):
