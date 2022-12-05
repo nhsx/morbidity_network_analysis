@@ -21,7 +21,7 @@ Option to build directed networks when diagnosis times are available.
   * [License](#license)
   * [Contact](#contact)
 
-### Installation
+## Installation
 Installation is possible via `pip` as shown below.
 
 Unix/macOS
@@ -222,4 +222,4 @@ Distributed under the MIT License. _See [LICENSE](./LICENSE) for more informatio
 
 
 ### Contact
-If you have any other questions please contact the author [Stephen Richer](mailto:stephen.richer@proton.me?subject=[GitHub]%20multinet)
+If you have any other questions please contact the author, [Stephen Richer](mailto:stephen.richer@proton.me?subject=[GitHub]%20multinet).
