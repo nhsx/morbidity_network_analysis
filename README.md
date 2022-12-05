@@ -39,8 +39,8 @@ py -m pip install git+https://github.com/nhsx/morbidity_network_analysis.git
 <summary><strong>Unix/macOS</strong></summary>
 
 ```bash
-python -m venv git+https://github.com/nhsx/morbidity_network_analysis.git
-source git+https://github.com/nhsx/morbidity_network_analysis.git/bin/activate
+python -m venv multinet
+source multinet/bin/activate
 python3 -m pip install git+https://github.com/nhsx/morbidity_network_analysis.git
 ```
 </details>
@@ -49,8 +49,8 @@ python3 -m pip install git+https://github.com/nhsx/morbidity_network_analysis.gi
 <summary><strong>Windows</strong></summary>
 
 ```bash
-py -m venv git+https://github.com/nhsx/morbidity_network_analysis.git
-git+https://github.com/nhsx/morbidity_network_analysis.git/Scripts/Activate.ps1
+py -m venv multinet
+multinet/Scripts/Activate.ps1
 py -m pip install git+https://github.com/nhsx/morbidity_network_analysis.git
 ```
 
