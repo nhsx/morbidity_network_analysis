@@ -310,7 +310,9 @@ def networkAnalysis(config: str, allLinks):
         }
     })
     net.set_options(f"var options = {options}")
-    net.save_graph(config['networkPlot'])
+    net.generate_html(config['networkPlot'])
+    with open(config['networkPlot'], 'w+') as out:
+        out.write(net.html)
 
 
 def getNodeSummary(

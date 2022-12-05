@@ -34,15 +34,13 @@ Windows
 py -m pip install git+https://github.com/nhsx/morbidity_network_analysis.git
 ```
 
-<details>
-<summary><strong><font size="+0.5">Install within a Virtual Environment (optional)</font></strong></summary>
-
+#### Install within a Virtual Environment (optional)
 <details>
 <summary><strong>Unix/macOS</strong></summary>
 
 ```bash
-python -m venv multinet
-source multinet/bin/activate
+python -m venv git+https://github.com/nhsx/morbidity_network_analysis.git
+source git+https://github.com/nhsx/morbidity_network_analysis.git/bin/activate
 python3 -m pip install git+https://github.com/nhsx/morbidity_network_analysis.git
 ```
 </details>
@@ -51,8 +49,8 @@ python3 -m pip install git+https://github.com/nhsx/morbidity_network_analysis.gi
 <summary><strong>Windows</strong></summary>
 
 ```bash
-py -m venv multinet
-multinet/Scripts/Activate.ps1
+py -m venv git+https://github.com/nhsx/morbidity_network_analysis.git
+git+https://github.com/nhsx/morbidity_network_analysis.git/Scripts/Activate.ps1
 py -m pip install git+https://github.com/nhsx/morbidity_network_analysis.git
 ```
 
@@ -61,7 +59,6 @@ If running scripts is disabled on your system then run the following command bef
 ```bash
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
-</details>
 </details>
 
 
