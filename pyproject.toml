@@ -9,7 +9,7 @@ authors = [
   {email = "stephen.richer@proton.me"},
   {name = "Stephen Richer"}
 ]
-description = 'Boilerplate package with example numerical tests.'
+description = 'Build and visualise multi-morbidity networks.'
 readme = 'README.md'
 requires-python = ">=3.7"
 keywords = ['morbidity_network_analysis', 'multinet']
