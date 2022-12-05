@@ -10,11 +10,8 @@ import numpy as np
 import pandas as pd
 
 
-sys.stdout.reconfigure(encoding='utf-8')
-
-
 def simulateData(
-        config: str, nNodes: int, nRecords: int,
+        out: str, config: str, nNodes: int, nRecords: int,
         codesPerRecord: int, weight: float, seed: int):
     assert 0 <= weight <= 1
     assert codesPerRecord >= 2
@@ -26,7 +23,7 @@ def simulateData(
         nodeSet = df.apply(getNextNode, args=(n, nodes, allWeights), axis=1)
         df[f'code{n}'] = nodeSet
         df[f'time{n}'] = (nNodes + 1) - df[f'code{n}']
-    df.to_csv(sys.stdout, index=False)
+    df.to_csv(out, index=False)
     writeConfig(config)
 
 

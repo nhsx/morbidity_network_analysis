@@ -104,7 +104,7 @@ The ```simulate``` sub-command generates suitably formatted input data for testi
 It also writes an example config file in YAML format.
 
 ```bash
-multinet simulate --config config.yaml > MultiNet-data.csv
+multinet simulate --config config.yaml MultiNet-data.csv
 ```
 
 ### Stage 1 - Processing input and generate edge weights.
