@@ -116,20 +116,11 @@ multinet process config.yaml
 ### Stage 2 - Network Construction and Visualisation
 The ```network``` sub-command parses the output of ```multinet process``` into a network and generate an interactive visualisation.
 The visualisation is written in `.html` format to the path defined by `networkPlot:` in the configuration file.
+The `--display` flag will open the output visualisations on your systems webbrowser.
 
 ```bash
-multinet network config.yaml
+multinet network --display config.yaml
 ```
-
-### Alternative Method - Run Full Workflow
-MultiNet can be optionally run in a single command that combines stage 1 and stage 2.
-
-```bash
-multinet analyse config.yaml
-```
-
-However, it is generally advised to run each stage separately.
-Optimal network visualisation parameters can be quickly explored without having to repeatedly re-run stage 1, which may require considerable compute time.
 
 
 ## Example output
@@ -197,7 +188,7 @@ minObs: 100 # Exclude stratified groups with too few observations.
 ```
 
 ```bash
-multinet enriched config.yaml
+multinet enriched --display config.yaml
 ```
 
 ![Example Enrichment](./README_files/exampleNet-enrichment.svg)

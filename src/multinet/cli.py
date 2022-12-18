@@ -8,7 +8,7 @@ import argparse
 from timeit import default_timer as timer
 from . import __version__
 import multinet
-from .main import main, edgeAnalysisOnly, networkAnalysisOnly, morbidityZ
+from .main import edge_analysis_cli, network_analysis_cli, enrichment_analysis_cli
 from .simulate import simulateData
 
 
@@ -24,35 +24,27 @@ def parseArgs() -> argparse.Namespace:
         metavar='Commands',
         help='Description:')
 
-    sp1 = subparser.add_parser(
-        'analyse',
-        description=main.__doc__,
-        help='Run full MultiNet pipeline.',
-        parents=[baseParser],
-        epilog=parser.epilog)
-    sp1.add_argument(
-        'config', help='YAML configuration file.')
-    sp1.set_defaults(function=main)
-
     sp2 = subparser.add_parser(
         'process',
-        description=edgeAnalysisOnly.__doc__,
+        description=edge_analysis_cli.__doc__,
         help='Pre-process data and compute edge weights.',
         parents=[baseParser],
         epilog=parser.epilog)
     sp2.add_argument(
         'config', help='YAML configuration file.')
-    sp2.set_defaults(function=edgeAnalysisOnly)
+    sp2.set_defaults(function=edge_analysis_cli)
 
     sp3 = subparser.add_parser(
         'network',
-        description=networkAnalysisOnly.__doc__,
+        description=network_analysis_cli.__doc__,
         help='Build and visualise network.',
         parents=[baseParser],
         epilog=parser.epilog)
+    sp3.add_argument('config', help='YAML configuration file.')
     sp3.add_argument(
-        'config', help='YAML configuration file.')
-    sp3.set_defaults(function=networkAnalysisOnly)
+        '--display', action='store_true',
+        help='Display visuals after creation (default: %(default)s)')
+    sp3.set_defaults(function=network_analysis_cli)
 
     sp4 = subparser.add_parser(
         'simulate',
@@ -83,13 +75,16 @@ def parseArgs() -> argparse.Namespace:
 
     sp5 = subparser.add_parser(
         'enriched',
-        description=multinet.simulate.__doc__,
+        description=enrichment_analysis_cli.__doc__,
         help='Estimate morbidity enrichment by strata.',
         parents=[baseParser],
         epilog=parser.epilog)
     sp5.add_argument(
         'config', help='YAML configuration file.')
-    sp5.set_defaults(function=morbidityZ)
+    sp5.add_argument(
+        '--display', action='store_true',
+        help='Display visuals after creation (default: %(default)s)')
+    sp5.set_defaults(function=enrichment_analysis_cli)
 
     args = parser.parse_args()
     if 'function' not in args:

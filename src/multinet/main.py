@@ -1,28 +1,24 @@
 #!/usr/bin/env python3
 
+
+import os
 from .utils import *
 import sys
 import logging
+import webbrowser
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import multinet.edgeAnalysis as ea
 
 
-def main(config: str):
-    """ Run Full Network Analysis Pipeline """
-    allLinks, config = ea.edgeAnalysis(config)
-    allLinks.to_csv(config['edgeData'], index=False)
-    networkAnalysis(config, allLinks)
-
-
-def edgeAnalysisOnly(config: str):
+def edge_analysis_cli(config: str):
     """ Run Stage 1 of Network Analysis Pipeline """
     allLinks, config = ea.edgeAnalysis(config)
     allLinks.to_csv(config['edgeData'], index=False)
 
 
-def networkAnalysisOnly(config: str):
+def network_analysis_cli(config: str, display: bool = False):
     """ Run Stage 2 of Network Analysis Pipeline """
     config = Config(config).config
     dtype = ({
@@ -34,8 +30,20 @@ def networkAnalysisOnly(config: str):
     allLinks = pd.read_csv(config['edgeData'], dtype=dtype)
     networkAnalysis(config, allLinks)
 
+    net_plot = os.path.abspath(config['networkPlot'])
+    print(f'Written network plot to {net_plot}', file=sys.stderr)
+    if display:
+        webbrowser.open(net_plot)
+    if config['wordcloud'] is not None:
+        path = os.path.abspath(config['wordcloud'])
+        print(f'Written wordcloud to {path}', file=sys.stderr)
+        if display:
+            webbrowser.open(path)
 
-def morbidityZ(config: str):
+
+
+def enrichment_analysis_cli(config: str, display: bool = False):
+    """ Compute morbidity enrichment across strata """
     config = Config(config).config
     np.random.seed(config['seed'])
     sns.set(font_scale=2, style='white')
@@ -93,4 +101,8 @@ def morbidityZ(config: str):
 
     fig.suptitle(f'{morbidities}')
     fig.tight_layout()
-    fig.savefig(config['enrichmentPlot'])
+    path = os.path.abspath(config['enrichmentPlot'])
+    fig.savefig(path)
+    print(f'Written enrichment plot to {path}', file=sys.stderr)
+    if display:
+        webbrowser.open(path)
