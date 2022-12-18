@@ -28,7 +28,7 @@ classifiers=[
 ]
 dependencies = [
     'numpy',
-    'pyvis',
+    'pyvis>=0.3.0',
     'scipy',
     'pyyaml',
     'pandas',
