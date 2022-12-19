@@ -46,7 +46,7 @@ def enrichment_analysis_cli(config: str, display: bool = False):
     """ Compute morbidity enrichment across strata """
     config = Config(config).config
     np.random.seed(config['seed'])
-    sns.set(font_scale=2, style='white')
+    sns.set(font_scale=config['fontScale'], style='white')
     if not config['enrichmentNode']:
         logging.error('No node(s) provided to config["enrichmentNode"].')
         return 1

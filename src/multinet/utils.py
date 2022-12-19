@@ -88,7 +88,8 @@ class Config():
             'seed': 42,
             'permutations': 1000,
             'chunkSize': None,
-            'seperator': None
+            'seperator': None,
+            'fontScale': 2
         })
 
     def _postProcessConfig(self):
@@ -126,6 +127,12 @@ class Config():
                     f'Non-integer argument passed to config: {par} '
                     f'({config[par]}) setting to {self.default[par]}.')
                 config[par] = self.default[par]
+        if not isinstance(config['fontScale'], (float, int)):
+            logging.error(
+                f'Non-numeric argument passed to config: fontScale '
+                f'({config['fontScale']}) setting '
+                f'to {self.default['fontScale']}.')
+            config[par] = self.default[par]
         if isinstance(config['codes'], list):
             config['directed'] = False
             config['codeCols'] = config['codes']
