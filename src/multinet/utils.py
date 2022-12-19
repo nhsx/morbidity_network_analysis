@@ -127,12 +127,13 @@ class Config():
                     f'Non-integer argument passed to config: {par} '
                     f'({config[par]}) setting to {self.default[par]}.')
                 config[par] = self.default[par]
-        if not isinstance(config['fontScale'], (float, int)):
-            logging.error(
-                f'Non-numeric argument passed to config: fontScale '
-                f'({config['fontScale']}) setting '
-                f'to {self.default['fontScale']}.')
-            config[par] = self.default[par]
+        numVars = ['fontScale']
+        for par in numVars:
+            if not isinstance(par, (float, int)):
+                logging.error(
+                    f'Non-numeric argument passed to config: {par}  '
+                    f'({config[par]}) setting to {self.default[par]}.')
+                config[par] = self.default[par]
         if isinstance(config['codes'], list):
             config['directed'] = False
             config['codeCols'] = config['codes']
