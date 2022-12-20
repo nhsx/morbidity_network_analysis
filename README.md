@@ -9,7 +9,7 @@ Detect significant associations are correcting for confounding factors such as A
 Includes community detection for un-directed networks.
 Option to build directed networks when diagnosis times are available.
 
-***Note: Directed network analysis is still experimental.***
+**Note**: _All example data used in this repository is simulated and for illustrative purposes only._
 
 ## Table of contents
 
