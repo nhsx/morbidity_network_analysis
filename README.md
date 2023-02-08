@@ -24,7 +24,7 @@ Option to build directed networks when diagnosis times are available.
 ### Built With
 
 [![Python v3.8](https://img.shields.io/badge/python-v3.8-blue.svg)](https://www.python.org/downloads/release/python-380/)
-[Multinet v0.1](https://pypi.org/project/multinet/)
+- [Multinet v0.1](https://pypi.org/project/multinet/)
 
 
 ## Installation
