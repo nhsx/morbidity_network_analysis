@@ -1,0 +1,590 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://nhsengland.github.io/MultiNet/">
+      
+      
+      
+      <link rel="icon" href="assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.4.2, mkdocs-material-9.1.1">
+    
+    
+      
+        <title>MultiNet</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.402914a4.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.a0c5b2b5.min.css">
+      
+      
+
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="" data-md-color-accent="">
+  
+    
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#multinet-multi-morbidity-network-analysis" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="." title="MultiNet" class="md-header__button md-logo" aria-label="MultiNet" data-md-component="logo">
+      
+  <img src="assets/network_badge_M.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MultiNet
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Home
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="MultiNet" class="md-nav__button md-logo" aria-label="MultiNet" data-md-component="logo">
+      
+  <img src="assets/network_badge_M.png" alt="logo">
+
+    </a>
+    MultiNet
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          Home
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="." class="md-nav__link md-nav__link--active">
+        Home
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    Overview
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    Configuration
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-example-data" class="md-nav__link">
+    Generate Example Data
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-1-processing-input-and-generate-edge-weights" class="md-nav__link">
+    Stage 1 - Processing input and generate edge weights.
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-2-network-construction-and-visualisation" class="md-nav__link">
+    Stage 2 - Network Construction and Visualisation
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-output" class="md-nav__link">
+    Example output
+  </a>
+  
+    <nav class="md-nav" aria-label="Example output">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#network-plot" class="md-nav__link">
+    Network Plot
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wordcloud" class="md-nav__link">
+    WordCloud
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enrichment-analysis-with-stratification" class="md-nav__link">
+    Enrichment Analysis with Stratification
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    Overview
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    Configuration
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage" class="md-nav__link">
+    Usage
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#generate-example-data" class="md-nav__link">
+    Generate Example Data
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-1-processing-input-and-generate-edge-weights" class="md-nav__link">
+    Stage 1 - Processing input and generate edge weights.
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-2-network-construction-and-visualisation" class="md-nav__link">
+    Stage 2 - Network Construction and Visualisation
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#example-output" class="md-nav__link">
+    Example output
+  </a>
+  
+    <nav class="md-nav" aria-label="Example output">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#network-plot" class="md-nav__link">
+    Network Plot
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wordcloud" class="md-nav__link">
+    WordCloud
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enrichment-analysis-with-stratification" class="md-nav__link">
+    Enrichment Analysis with Stratification
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+<h1 id="multinet-multi-morbidity-network-analysis">MultiNet - Multi-Morbidity Network Analysis</h1>
+<p><strong>Note</strong>: <em>All example data used in this repository is simulated and for illustrative purposes only.</em></p>
+<p>See code <code>README</code> for installation and usage instructions. </p>
+<h2 id="overview">Overview</h2>
+<p>Build and visualise multi-morbidity networks to discover significant disease associations.</p>
+<p>This command line tool provides user-friendly and automated multi-morbidity network analysis.
+Detect significant associations are correcting for confounding factors such as Age and Sex.
+Includes community detection for un-directed networks.
+Option to build directed networks when diagnosis times are available.</p>
+<h2 id="configuration">Configuration</h2>
+<p>MultiNet is configured via a single configuration file in YAML format.
+The configuration describes the file-path of the input data and column names of the desired strata and diseases.
+All columns provided in the configuration must be present in the input data.
+MultiNet can automatically handle gzipped compressed files and file seperator can be configured to any relevant character.
+The configuration file shown below is suitable for the example data generated by <code>multinet simulate out</code> (see below).</p>
+<pre><code class="language-yaml">input: MultiNet-data.csv
+edgeData: MultiNet-processed.csv.gz
+networkPlot: MultiNet.html
+codes:
+    code1: time1
+    code2: time2
+    code3: time3
+    code4: time4
+strata:
+    - Age
+refNode: 30
+maxNode: 10
+wordcloud: MultiNet-wordcloud.svg
+fromRef: true
+excludeNode: 1
+enrichmentPlot: MultiNet-enrichment.svg
+enrichmentNode: 1
+demographics: Age
+seed: 42
+
+</code></pre>
+<h2 id="usage">Usage</h2>
+<p>MultiNet can be run from the command line and additional help is provided via <code>multinet --help</code>.</p>
+<h3 id="generate-example-data">Generate Example Data</h3>
+<p>The <code>simulate</code> sub-command generates suitably formatted input data for testing functionality.
+It also writes an example config file in YAML format.</p>
+<pre><code class="language-bash">multinet simulate --config config.yaml MultiNet-data.csv
+</code></pre>
+<h3 id="stage-1-processing-input-and-generate-edge-weights">Stage 1 - Processing input and generate edge weights.</h3>
+<p>The <code>process</code> sub-command reads the input data and performs a stratified odds-ratio test (Mantel-Haenszel method) for each pair of morbidities.
+The results are written in <code>.csv</code> format to the path defined by <code>edgeData:</code> in the configuration file.
+The default simulated data should take approximately 5 minutes to process.</p>
+<pre><code class="language-bash">multinet process config.yaml
+</code></pre>
+<h3 id="stage-2-network-construction-and-visualisation">Stage 2 - Network Construction and Visualisation</h3>
+<p>The <code>network</code> sub-command parses the output of <code>multinet process</code> into a network and generate an interactive visualisation.
+The visualisation is written in <code>.html</code> format to the path defined by <code>networkPlot:</code> in the configuration file.
+The <code>--display</code> flag will open the output visualisations on your systems webbrowser.</p>
+<pre><code class="language-bash">multinet network --display config.yaml
+</code></pre>
+<h2 id="example-output">Example output</h2>
+<p>The example dataset is designed to test MultiNet functionality and illustrate its output.
+The simulated data defines relationship among the nodes according to their numerical values.
+Specifically, a given node is more likely to associate with numeric factors (e.g. node 8 -&gt; 4, 2, 1).
+MultiNet can successfully recover these directed relationships in the network analysis.</p>
+<h3 id="network-plot">Network Plot</h3>
+<p>The conventional way to visualise connections is via a Network plot.
+The user may choose to visualise the entire network or, as below, the network centered on a reference node or nodes.
+This is often helpful when working with large networks or if you are interested in specific nodes.</p>
+<p>If a reference node is provided then node size and colour are scaled to the distance from the reference node.
+Otherwise, node size and colour are scaled to betweenness centrality.</p>
+<p>Configuration settings that control the output of the Network plot.</p>
+<pre><code class="language-yaml">refNode: 30 # Node(s) to centre the Network Plot (optional).  
+maxNode: 10 # Plot nearest nodes to reference (if refNode is set).
+excludeNode: 1 # Exclude node(s) from the visualisation (optional).
+minDegree: 0 # Exclude nodes by degree (if refNode is NOT set).
+stat: OR # Set weights by Odds Ratio (OR) or Risk Ratio (RR)
+alpha: 0.01 # Exclude edges with adj. p-value less than alpha.
+minObs: 100 # Exclude edges with too few observations.
+</code></pre>
+<p align="center">
+    <img src="assets/exampleNet-ref.png" alt="Example network with reference node 30 and 10 closest nodes. Reference nodes are black." width="80%"/>
+</p>
+<p><br> <em>Figure: Example network with reference node 30 and 10 closest nodes. Reference nodes are black.</em></p>
+<h3 id="wordcloud">WordCloud</h3>
+<p>If reference nodes are provided then the user may also visualise relationships with a WordCloud.
+Here, the size of each node is scaled to the distance from the reference node.
+If the network is directed the WordCloud can either represent downstream nodes <em>from</em> the reference or upstream nodes <em>to</em> the reference.
+This is controlled via <code>config['fromRef']</code>.</p>
+<p>Configuration settings that control the output of the WordCloud plot.</p>
+<pre><code class="language-yaml">wordcloud: MultiNet-wordcloud.svg # Filename for plot (required).
+refNode: 30 # Node(s) to centre the WordCloud.  
+fromRef: true # Plot &quot;from&quot; reference or &quot;to&quot; reference (directed only)
+excludeNode: 1 # Exclude node(s) from the visualisation (optional).
+maxWords: None # Include N closest nodes, set None to include all.
+</code></pre>
+<p align="center">
+    <img src="assets/exampleNet-wordcloud.svg" alt="Example WordCloud with all downstream nodes from reference node 30." width="80%"/>
+</p>
+<p><br> <em>Figure: Example WordCloud with all downstream nodes from reference node 30.</em></p>
+<h3 id="enrichment-analysis-with-stratification">Enrichment Analysis with Stratification</h3>
+<p>MultiNet also provides additional functionality to test specific nodes for enrichment against discrete grouping factors, such as demographics.
+For illustration, the simulated example dataset enforces a positive enrichment of node "1" within older age groups.
+Multiple demographic groups can be provided; each will be tested for enrichment of the specific node and stratified by the other groups.</p>
+<p>Configuration settings that control the output of the Enrichment plot.</p>
+<pre><code class="language-yaml">enrichmentPlot: MultiNet-enrichment.svg # Filename for plot (required).
+enrichmentNode: 1 # Node to assess enrichment within each demographic.
+demographics: Age # Demographics of interest (required).
+seed: 42 # Seed to control random permutations.
+permutations: 1000 # Total permutations to perform.
+minObs: 100 # Exclude stratified groups with too few observations.
+</code></pre>
+<pre><code class="language-bash">multinet enriched --display config.yaml
+</code></pre>
+<p align="center">
+    <img src="assets/exampleNet-enrichment.svg" alt="Example enrichment of node 1 by Age" width="80%"/>
+</p>
+<p><br> <em>Figure: Example enrichment of node 1 by Age</em></p>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": ".", "features": [], "search": "assets/javascripts/workers/search.208ed371.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="assets/javascripts/bundle.b78d2936.min.js"></script>
+      
+    
+  </body>
+</html>
