@@ -1,0 +1,7 @@
+site_name: MultiNet
+site_url: https://nhsengland.github.io/MultiNet
+nav:
+  - Home: index.md
+theme: 
+  name: material
+  logo: assets/network_badge_M.png
